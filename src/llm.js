@@ -9,7 +9,7 @@
 // provenance stays explicit ("who wrote this" is always visible).
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const DEFAULT_MODEL = 'anthropic/claude-haiku-4.5';
+const DEFAULT_MODEL = 'anthropic/claude-haiku-5.5';
 
 async function chat(apiKey, model, messages, { temperature = 0.7, maxTokens = 400 } = {}) {
   const ctrl = new AbortController();
@@ -21,7 +21,9 @@ async function chat(apiKey, model, messages, { temperature = 0.7, maxTokens = 40
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
+      // Haiku 5.5 thinks adaptively; thinking tokens count toward max_tokens,
+      // so keep effort low — these are short compositional tasks.
+      body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, reasoning: { effort: 'low' } }),
       signal: ctrl.signal,
     });
     if (!res.ok) return null;

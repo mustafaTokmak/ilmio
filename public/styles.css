@@ -34,7 +34,7 @@ body {
 .screen { min-height: 100vh; }
 .hidden { display: none !important; }
 
-h1, h2, h3, h4 { color: var(--ink); font-weight: normal; font-family: Didot, 'Bodoni MT', 'Playfair Display', Georgia, serif; }
+h1, h2, h3, h4 { color: var(--ink); font-weight: normal; font-family: Fraunces, 'Playfair Display', Georgia, serif; }
 button { font: inherit; cursor: pointer; }
 code { background: var(--paper-deep); padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.8em; }
 .meta { font-size: 0.78rem; color: var(--blue-soft); }
@@ -90,11 +90,13 @@ code { background: var(--paper-deep); padding: 0.1rem 0.35rem; border-radius: 4p
   border: 1px solid var(--line);
 }
 .welcome h1 {
-  font-family: Georgia, 'Iowan Old Style', serif;
-  font-size: 3.4rem;
-  letter-spacing: 0.02em;
+  font-family: Fraunces, 'Playfair Display', Georgia, serif;
+  font-size: 4.2rem;
+  font-weight: 700;
+  font-variation-settings: 'opsz' 144;
+  letter-spacing: -0.03em;
   margin: 0 0 0.5rem;
-  color: #2e5f9e;
+  color: #1f4c7f;
 }
 
 .welcome .frame {
@@ -106,7 +108,7 @@ code { background: var(--paper-deep); padding: 0.1rem 0.35rem; border-radius: 4p
   margin-bottom: 10vh;
   padding: 4rem 3rem;
 }
-.welcome h1 { line-height: 1.05; font-weight: 500; }
+.welcome h1 { line-height: 1.0; }
 .pitch { color: var(--blue); font-style: italic; font-size: 1.15rem; margin: 0 0 2.5rem; }
 
 .welcome-actions { display: flex; flex-direction: column; gap: 0.8rem; align-items: center; }
