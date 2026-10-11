@@ -138,10 +138,11 @@ function renderFriends(state) {
     if (c) {
       box.appendChild(el('p', 'memory', `“${c.text}”`));
       if (c.intendedInfluence) box.appendChild(el('p', 'influence', `intended: ${c.intendedInfluence}`));
-    } else if (role() === 'host' || role() === f) {
+    } else if (role() === f) {
       box.appendChild(contributionEditor(f));
     } else {
-      box.appendChild(el('p', 'influence', 'hasn’t added a memory yet'));
+      box.appendChild(el('p', 'influence',
+        role() === 'host' ? 'waiting for their memory — invite them via the attendee link' : 'hasn’t added a memory yet'));
     }
     wrap.appendChild(box);
   }
