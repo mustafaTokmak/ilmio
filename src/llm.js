@@ -11,7 +11,7 @@
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_MODEL = 'anthropic/claude-haiku-5.5';
 
-async function chat(apiKey, model, messages, { temperature = 0.7, maxTokens = 400 } = {}) {
+async function chat(apiKey, model, messages, { temperature = 0.7, maxTokens } = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 20000);
   try {
@@ -23,7 +23,7 @@ async function chat(apiKey, model, messages, { temperature = 0.7, maxTokens = 40
       },
       // Haiku 5.5 thinks adaptively; thinking tokens count toward max_tokens,
       // so keep effort low — these are short compositional tasks.
-      body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, reasoning: { effort: 'low' } }),
+      body: JSON.stringify({ model, messages, temperature, ...(maxTokens ? { max_tokens: maxTokens } : {}), reasoning: { effort: 'low' } }),
       signal: ctrl.signal,
     });
     if (!res.ok) return null;
@@ -114,7 +114,7 @@ function createLlm(apiKey, model = DEFAULT_MODEL) {
           (avoid.length ? `Already suggested (give different ones): ${avoid.join(' | ')}\n` : '') +
           `Give ${count} diverse suggestions:`,
       },
-    ], { temperature: 0.9, maxTokens: 350 });
+    ], { temperature: 0.9 });
     if (!text) return null;
     const m = text.match(/\[[\s\S]*\]/);
     if (!m) return null;

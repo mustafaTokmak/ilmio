@@ -224,12 +224,14 @@ function ideaPanel(friend, onPick) {
     more.disabled = true;
     try {
       const avoid = [...shown];
-      const { ideas, engine } = window.ogmpLocal
+      const data = window.ogmpLocal
         ? window.ogmpLocal.suggest(code(), f, { hint: steer.value, avoid })
         : await (await fetch(
             `/api/suggest?friend=${f}&code=${encodeURIComponent(code())}` +
             `&hint=${encodeURIComponent(steer.value)}&avoid=${encodeURIComponent(avoid.join('|'))}`
           )).json();
+      const { ideas, engine } = data || {};
+      if (!Array.isArray(ideas)) throw new Error('no new ideas right now — try again');
       for (const idea of ideas) {
         shown.add(idea.memory);
         const chip = el('div', 'idea-chip');

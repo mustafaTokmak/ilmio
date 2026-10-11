@@ -389,7 +389,12 @@ async function handleApi(req, res, url) {
     let ideas = null;
     let ideasEngine = 'local-template';
     if (llm) {
-      ideas = await llm.suggest(state.gift, engine.friendName(state.gift, friend), state.contributions, count, { hint, avoid });
+      try {
+        ideas = await llm.suggest(state.gift, engine.friendName(state.gift, friend), state.contributions, count, { hint, avoid });
+      } catch (e) {
+        console.warn(`suggest: ${e.message}`);
+        ideas = null;
+      }
       if (ideas) ideasEngine = llm.engine;
     }
     if (!ideas) ideas = suggest(state.gift, friend, state.contributions, count);
