@@ -14,8 +14,8 @@ const FRIEND_NAMES = {
   sam: 'Sam',
 };
 
-const PALETTE = ['cobalt blue', 'warm ivory', 'a small lemon accent'];
-const STYLE = 'Turkish İznik ceramic-tile motifs — stylized tulips, thin geometric border, hand-painted feel';
+const PALETTE = ['vivid cobalt blue', 'clean bright white', 'a small lemon-yellow accent'];
+const STYLE = 'Turkish İznik ceramic-tile motifs — stylized tulips, thin geometric border, crisp saturated colors like glazed tile';
 
 function now() {
   return new Date().toISOString();
