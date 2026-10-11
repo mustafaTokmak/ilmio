@@ -8,7 +8,7 @@
 // would implement the same {narrate(version, gift) -> string} signature and
 // record its engine name on the stored narrative.
 
-const FRIEND_NAMES = require('./state').FRIEND_NAMES;
+const { friendName } = require('./state');
 
 function narrate(version, gift) {
   const influences = version.brief.influences || [];
@@ -21,7 +21,7 @@ function narrate(version, gift) {
   );
 
   for (const inf of influences) {
-    const who = FRIEND_NAMES[inf.friend] || inf.friend;
+    const who = friendName(gift, inf.friend);
     const callout = callouts.find((c) => c.friend === inf.friend);
     const detail = callout ? callout.intended : inf.intendedInfluence || 'a quiet place in the pattern';
     sentences.push(`${who} brought “${inf.contribution}”, which became ${detail}.`);

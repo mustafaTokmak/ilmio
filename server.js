@@ -211,7 +211,12 @@ async function handleApi(req, res, url) {
       recipient: String(body.recipient || '').trim() || 'Maya',
       occasion: String(body.occasion || '').trim() || 'housewarming',
       category: String(body.category || '').trim() || 'pillow cover',
+      friendNames: {},
     };
+    for (const f of engine.FRIENDS) {
+      const n = body.friendNames && String(body.friendNames[f] || '').trim();
+      if (n) gift.friendNames[f] = n.slice(0, 30);
+    }
     const contributions = body.prefill
       ? SEED.contributions
       : { alex: null, deniz: null, sam: null };

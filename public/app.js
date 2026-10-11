@@ -35,6 +35,11 @@ function setRole(r) {
   localStorage.setItem('ogmp-role', r);
 }
 
+function name(f) {
+  const names = last && last.state && last.state.gift && last.state.gift.friendNames;
+  return (names && names[f]) || FRIEND_NAMES[f];
+}
+
 function go(name) {
   location.hash = '#/' + name;
 }
@@ -118,7 +123,7 @@ function renderRoleSwitch() {
   const wrap = document.getElementById('role-switch');
   wrap.innerHTML = '';
   for (const r of ['host', ...FRIENDS]) {
-    const b = el('button', r === role() ? 'active' : '', r === 'host' ? 'Host' : FRIEND_NAMES[r]);
+    const b = el('button', r === role() ? 'active' : '', r === 'host' ? 'Host' : name(r));
     b.onclick = () => { setRole(r); refresh(); };
     wrap.appendChild(b);
   }
@@ -131,9 +136,9 @@ function renderFriends(state) {
   wrap.innerHTML = '';
   for (const f of FRIENDS) {
     const box = el('div', 'friend');
-    const name = el('div', 'name', FRIEND_NAMES[f]);
-    if (role() === f) name.appendChild(el('span', 'tag', 'you'));
-    box.appendChild(name);
+    const label = el('div', 'name', name(f));
+    if (role() === f) label.appendChild(el('span', 'tag', 'you'));
+    box.appendChild(label);
     const c = state.contributions[f];
     if (c) {
       box.appendChild(el('p', 'memory', `“${c.text}”`));
@@ -176,7 +181,7 @@ function contributionEditor(f) {
   frag.appendChild(brainstormBtn);
   frag.appendChild(ideasBox);
 
-  const btn = el('button', 'secondary', `Add ${FRIEND_NAMES[f]}'s memory`);
+  const btn = el('button', 'secondary', `Add ${name(f)}'s memory`);
   btn.onclick = async () => {
     btn.disabled = true;
     try {
@@ -260,7 +265,7 @@ function renderStage(state) {
       head.appendChild(cfg);
       for (const c of v.bundle.callouts || []) {
         head.appendChild(el('p', 'callout',
-          `${FRIEND_NAMES[c.friend]} → ${c.intended} (intended, unverified)`));
+          `${name(c.friend)} → ${c.intended} (intended, unverified)`));
       }
       if (v.quote) {
         const q = el('div', 'quote');
@@ -294,12 +299,12 @@ function renderApprovals(state) {
   const isHost = me === 'host';
   hint.textContent = isHost
     ? 'Staged demo controls — each button acts as that friend, bound to the current version.'
-    : `You are ${FRIEND_NAMES[me]} — approve or request a change on the current proposal.`;
+    : `You are ${name(me)} — approve or request a change on the current proposal.`;
   const count = approvedCount(v);
 
   for (const f of FRIENDS) {
     const box = el('div', 'approval');
-    box.appendChild(el('div', 'who', FRIEND_NAMES[f] + (f === me ? ' (you)' : '')));
+    box.appendChild(el('div', 'who', name(f) + (f === me ? ' (you)' : '')));
     const st = v.approvals[f];
     box.appendChild(el('div', 'state ' + st,
       st === 'approved' ? 'approved' : st === 'change_requested' ? 'change requested' : 'awaiting'));
@@ -366,7 +371,7 @@ function renderStory(state, status) {
   for (const inf of v.brief.influences) {
     const callout = (v.bundle.callouts || []).find((c) => c.friend === inf.friend);
     const row = el('div', 'story-row');
-    row.appendChild(el('span', 'who', FRIEND_NAMES[inf.friend]));
+    row.appendChild(el('span', 'who', name(inf.friend)));
     row.appendChild(el('span', 'arrow', '→'));
     row.appendChild(el('span', null,
       `“${inf.contribution}” → ${callout ? callout.intended : 'visible in the design'} (intended influence)`));
@@ -410,6 +415,15 @@ function renderActivity(state) {
 
 /* ── organizer onboarding ────────────────────────────── */
 
+document.getElementById('org-next').onclick = () => {
+  document.getElementById('org-friends').classList.remove('hidden');
+  document.getElementById('org-next').closest('.frame').classList.add('hidden');
+};
+document.getElementById('org-back2').onclick = () => {
+  document.getElementById('org-friends').classList.add('hidden');
+  document.getElementById('org-next').closest('.frame').classList.remove('hidden');
+};
+
 document.getElementById('org-create').onclick = async () => {
   const btn = document.getElementById('org-create');
   btn.disabled = true;
@@ -418,6 +432,11 @@ document.getElementById('org-create').onclick = async () => {
       recipient: document.getElementById('org-recipient').value,
       occasion: document.getElementById('org-occasion').value,
       category: document.getElementById('org-category').value,
+      friendNames: {
+        alex: document.getElementById('org-friend-alex').value,
+        deniz: document.getElementById('org-friend-deniz').value,
+        sam: document.getElementById('org-friend-sam').value,
+      },
       prefill: document.getElementById('org-prefill').checked,
     });
     setRole('host');
@@ -437,7 +456,7 @@ function renderJoinPick() {
   const contribs = last ? last.state.contributions : {};
   for (const f of FRIENDS) {
     const b = el('button', 'who-card');
-    b.appendChild(el('span', null, FRIEND_NAMES[f]));
+    b.appendChild(el('span', null, name(f)));
     b.appendChild(el('small', null, contribs[f] ? 'memory added' : 'not yet added'));
     b.onclick = () => openJoinWrite(f);
     grid.appendChild(b);
@@ -451,7 +470,7 @@ function openJoinWrite(f) {
   document.getElementById('join-done').classList.add('hidden');
   document.getElementById('join-write').classList.remove('hidden');
   const gift = last.state.gift;
-  document.getElementById('join-title').textContent = `${FRIEND_NAMES[f]}, add your memory`;
+  document.getElementById('join-title').textContent = `${name(f)}, add your memory`;
   document.getElementById('join-context').textContent =
     `${gift.recipient} is celebrating a ${gift.occasion}. Your memory shapes the ${gift.category}'s design — the others already shared:`;
   const others = document.getElementById('join-others');
@@ -461,7 +480,7 @@ function openJoinWrite(f) {
     const c = last.state.contributions[of2];
     if (c) {
       const line = el('div', 'other-line');
-      line.appendChild(el('b', null, `${FRIEND_NAMES[of2]}: `));
+      line.appendChild(el('b', null, `${name(of2)}: `));
       line.appendChild(el('span', null, `“${c.text}”`));
       others.appendChild(line);
     }

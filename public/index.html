@@ -49,8 +49,25 @@
         <input id="org-prefill" type="checkbox" checked />
         Stage the demo (prefill Alex &amp; Deniz's memories)
       </label>
-      <button class="big" id="org-create">Create the gift →</button>
+      <button class="big" id="org-next">Next: add friends →</button>
       <button class="link" data-go="welcome">← back</button>
+    </div>
+    <div class="frame narrow hidden" id="org-friends">
+      <img class="mascot small" src="ilmio.png" alt="" />
+      <p class="step-label">Organizer · step 2 of 2</p>
+      <h2>Who's contributing?</h2>
+      <p class="hint">Each friend adds their own memory — they'll approve the gift it becomes.</p>
+      <label>Friend 1
+        <input id="org-friend-alex" type="text" value="Alex" maxlength="30" />
+      </label>
+      <label>Friend 2
+        <input id="org-friend-deniz" type="text" value="Deniz" maxlength="30" />
+      </label>
+      <label>Friend 3
+        <input id="org-friend-sam" type="text" value="Sam" maxlength="30" />
+      </label>
+      <button class="big" id="org-create">Create the gift →</button>
+      <button class="link" id="org-back2">← back</button>
     </div>
   </section>
 

@@ -29,6 +29,10 @@ function fingerprintContributions(contributions) {
   return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 16);
 }
 
+function friendName(gift, id) {
+  return (gift.friendNames && gift.friendNames[id]) || FRIEND_NAMES[id] || id;
+}
+
 // Deterministic brief: same contributions always produce the same brief.
 function buildBrief(gift, contributions) {
   const influences = FRIENDS.filter((f) => contributions[f] && contributions[f].text.trim()).map(
@@ -40,7 +44,7 @@ function buildBrief(gift, contributions) {
   );
 
   const parts = influences.map(
-    (i) => `${FRIEND_NAMES[i.friend]}: "${i.contribution}"`
+    (i) => `${friendName(gift, i.friend)}: "${i.contribution}"`
   );
   const text =
     `A ${gift.occasion} gift for ${gift.recipient} — ${gift.category}. ` +
@@ -101,7 +105,7 @@ function createState(seed) {
   }
 
   const state = {
-    gift: { ...seed.gift },
+    gift: { friendNames: { ...FRIEND_NAMES, ...(seed.gift.friendNames || {}) }, ...seed.gift },
     contributions,
     versions: [],
     currentVersionId: null,
@@ -169,7 +173,7 @@ function submitContribution(state, friend, text, intendedInfluence) {
   log(
     state,
     'contribution-submitted',
-    `${FRIEND_NAMES[friend]} added a contribution — ${prev ? prev.id + ' is stale, ' : ''}new brief ${brief.fingerprint}`
+    `${friendName(state.gift, friend)} added a contribution — ${prev ? prev.id + ' is stale, ' : ''}new brief ${brief.fingerprint}`
   );
   return version;
 }
@@ -271,7 +275,7 @@ function approve(state, versionId, friend) {
   if (!version.bundle) throw new Error('no-artwork: nothing to approve yet');
 
   version.approvals[friend] = 'approved';
-  log(state, 'approved', `${FRIEND_NAMES[friend]} approved ${version.id}`);
+  log(state, 'approved', `${friendName(state.gift, friend)} approved ${version.id}`);
   return version;
 }
 
@@ -287,7 +291,7 @@ function requestChange(state, versionId, friend, note) {
   version.approvals[friend] = 'change_requested';
   version.changeNotes = version.changeNotes || [];
   version.changeNotes.push({ friend, note: note || null, at: now() });
-  log(state, 'change-requested', `${FRIEND_NAMES[friend]} requested a change on ${version.id}`);
+  log(state, 'change-requested', `${friendName(state.gift, friend)} requested a change on ${version.id}`);
   return version;
 }
 
@@ -360,6 +364,7 @@ function deserialize(json) {
 module.exports = {
   FRIENDS,
   FRIEND_NAMES,
+  friendName,
   createState,
   buildBrief,
   fingerprintContributions,
