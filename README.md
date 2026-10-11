@@ -19,3 +19,25 @@ A group gift usually reflects whoever buys it. Here, every friend adds a memory 
 ## Build
 
 One local page with five states (contributions → first product → changed brief → revised product → approved story card), a deterministic brief builder, version-bound approvals, an activity trail, and a reset control. Standard HTML/CSS/JavaScript with a small local Node server; recorded result bundles keep reload and offline rehearsal working.
+
+## Run
+
+Requires Node 18+. No dependencies.
+
+```bash
+node server.js        # serves the demo on http://localhost:3847
+node --test           # runs the state-rule checks
+```
+
+`GENERATION_LATENCY_MS` tunes the simulated generation wait (default 2500 ms).
+
+## Layout
+
+- `src/state.js` — pure state engine: brief builder, version lifecycle, approvals, quote rules
+- `src/provider.js` — provider adapter boundary (recorded bundles today; Arcade API later)
+- `server.js` — dependency-free Node server + JSON API + state persistence
+- `public/` — the single-page demo
+- `bundles/` — recorded results keyed by brief fingerprint, with provenance labels
+- `test/` — `node:test` checks for the state and quote rules
+
+Prepared bundles in `bundles/` are labeled illustrations, not Arcade API responses.

@@ -1,0 +1,10 @@
+{
+  "name": "one-gift-many-people",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Group gift demo for Shopping 3.0 — every contribution changes the proposal",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  }
+}

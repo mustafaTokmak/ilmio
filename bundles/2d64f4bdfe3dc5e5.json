@@ -1,0 +1,42 @@
+{
+  "kind": "recorded-result",
+  "briefFingerprint": "2d64f4bdfe3dc5e5",
+  "provenance": {
+    "kind": "illustration",
+    "label": "Sample illustration — not an Arcade response",
+    "method": "AI-generated illustration standing in for a recorded result",
+    "recordedAt": "2026-10-11T00:00:00.000Z"
+  },
+  "product": {
+    "name": "Pillow cover — lemon, tulip, geometric border",
+    "category": "pillow cover",
+    "configuration": {
+      "size": "18 x 18 in",
+      "fabric": "cotton-linen",
+      "print": "single-sided",
+      "closure": "hidden zipper",
+      "insertIncluded": false
+    }
+  },
+  "image": "bundles/assets/design-v1.png",
+  "callouts": [
+    { "friend": "alex", "intended": "one small lemon-and-leaf detail" },
+    { "friend": "deniz", "intended": "a simplified tulip and thin geometric border" }
+  ],
+  "quote": {
+    "unitPrice": "34.00",
+    "currency": "USD",
+    "quantity": 1,
+    "shipping": "not provided",
+    "tax": "not provided",
+    "duties": "not provided",
+    "expiresAt": null,
+    "configuration": {
+      "size": "18 x 18 in",
+      "fabric": "cotton-linen",
+      "print": "single-sided",
+      "closure": "hidden zipper",
+      "insertIncluded": false
+    }
+  }
+}

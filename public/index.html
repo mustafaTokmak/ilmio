@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>One Gift, Many People</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>One Gift, Many People</h1>
+    <p class="subtitle">Everyone adds a memory. Together, you make one gift.</p>
+    <p id="gift-line" class="gift-line"></p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>The friends</h2>
+      <div id="friends" class="friends"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Current design brief</h2>
+      <p id="brief-text" class="brief-text"></p>
+      <p class="meta">brief fingerprint <code id="brief-fp"></code></p>
+    </section>
+
+    <section class="panel">
+      <h2>The proposal</h2>
+      <div id="stage" class="stage"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Approvals</h2>
+      <p class="meta">Demo controls — each button acts as that friend. Approvals bind to the exact version shown.</p>
+      <div id="approvals" class="approvals"></div>
+      <div id="host-box" class="host-box"></div>
+    </section>
+
+    <section id="story-panel" class="panel story hidden">
+      <h2>For Maya</h2>
+      <div id="story-card"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Activity</h2>
+      <ul id="activity" class="activity"></ul>
+    </section>
+
+    <button id="reset" class="reset">Reset demo</button>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

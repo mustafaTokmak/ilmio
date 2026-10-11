@@ -1,0 +1,43 @@
+{
+  "kind": "recorded-result",
+  "briefFingerprint": "5d8ba6c6bdee9d24",
+  "provenance": {
+    "kind": "illustration",
+    "label": "Sample illustration — not an Arcade response",
+    "method": "AI-generated illustration standing in for a recorded result",
+    "recordedAt": "2026-10-11T00:00:00.000Z"
+  },
+  "product": {
+    "name": "Pillow cover — quiet tulip, thin border",
+    "category": "pillow cover",
+    "configuration": {
+      "size": "18 x 18 in",
+      "fabric": "cotton-linen",
+      "print": "single-sided",
+      "closure": "hidden zipper",
+      "insertIncluded": false
+    }
+  },
+  "image": "bundles/assets/design-v2.png",
+  "callouts": [
+    { "friend": "alex", "intended": "a tiny lemon accent" },
+    { "friend": "deniz", "intended": "a faint tulip motif and thin border" },
+    { "friend": "sam", "intended": "more empty space, quieter pattern, no lettering" }
+  ],
+  "quote": {
+    "unitPrice": "34.00",
+    "currency": "USD",
+    "quantity": 1,
+    "shipping": "not provided",
+    "tax": "not provided",
+    "duties": "not provided",
+    "expiresAt": null,
+    "configuration": {
+      "size": "18 x 18 in",
+      "fabric": "cotton-linen",
+      "print": "single-sided",
+      "closure": "hidden zipper",
+      "insertIncluded": false
+    }
+  }
+}

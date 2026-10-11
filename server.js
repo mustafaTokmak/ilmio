@@ -1,0 +1,188 @@
+'use strict';
+
+// Local demo server — Node built-ins only, no framework.
+// Serves public/ and a small JSON API over the pure state engine in src/state.js.
+
+const http = require('node:http');
+const fs = require('node:fs');
+const path = require('node:path');
+const engine = require('./src/state');
+const { createRecordedProvider } = require('./src/provider');
+
+const PORT = process.env.PORT || 3847;
+const ROOT = __dirname;
+const PUBLIC = path.join(ROOT, 'public');
+const BUNDLES = path.join(ROOT, 'bundles');
+const DATA_DIR = path.join(ROOT, 'data');
+const STATE_FILE = path.join(DATA_DIR, 'state.json');
+
+const SEED = {
+  gift: { recipient: 'Maya', occasion: 'housewarming', category: 'pillow cover' },
+  contributions: {
+    alex: {
+      text: 'Lemon sprigs from our garden walks',
+      intendedInfluence: 'one small lemon-and-leaf detail',
+    },
+    deniz: {
+      text: 'Blue tiled courtyards and Turkish motifs',
+      intendedInfluence: 'a simplified tulip and thin geometric border',
+    },
+    sam: null,
+  },
+};
+
+let state = loadState();
+const provider = createRecordedProvider(BUNDLES, Number(process.env.GENERATION_LATENCY_MS || 2500));
+
+function loadState() {
+  try {
+    return engine.deserialize(fs.readFileSync(STATE_FILE, 'utf8'));
+  } catch {
+    return engine.createState(SEED);
+  }
+}
+
+function saveState() {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(STATE_FILE, engine.serialize(state));
+}
+
+function sendJson(res, status, body) {
+  res.writeHead(status, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(body));
+}
+
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (c) => (data += c));
+    req.on('end', () => {
+      try {
+        resolve(data ? JSON.parse(data) : {});
+      } catch (e) {
+        reject(e);
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+function clientError(res, e) {
+  sendJson(res, 400, { error: e.message });
+}
+
+const MIME = {
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.js': 'text/javascript',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+};
+
+function serveStatic(res, urlPath) {
+  let rel = urlPath === '/' ? '/index.html' : urlPath;
+  const file = path.normalize(path.join(PUBLIC, rel));
+  if (!file.startsWith(PUBLIC)) {
+    res.writeHead(403).end();
+    return;
+  }
+  fs.readFile(file, (err, data) => {
+    if (err) {
+      // bundles assets are served too (recorded image files must be local)
+      const bundled = path.normalize(path.join(BUNDLES, rel.replace(/^\/bundles/, '')));
+      if (bundled.startsWith(BUNDLES)) {
+        return fs.readFile(bundled, (e2, d2) => {
+          if (e2) {
+            res.writeHead(404).end('not found');
+          } else {
+            res.writeHead(200, { 'Content-Type': MIME[path.extname(bundled)] || 'application/octet-stream' });
+            res.end(d2);
+          }
+        });
+      }
+      res.writeHead(404).end('not found');
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
+    res.end(data);
+  });
+}
+
+async function handleApi(req, res, url) {
+  const p = url.pathname;
+  const body = req.method === 'POST' ? await readBody(req) : {};
+
+  if (req.method === 'GET' && p === '/api/state') {
+    return sendJson(res, 200, { state, status: engine.giftStatus(state) });
+  }
+
+  if (req.method === 'POST' && p === '/api/contributions') {
+    const v = engine.submitContribution(state, body.friend, body.text, body.intendedInfluence);
+    saveState();
+    return sendJson(res, 200, { version: v, status: engine.giftStatus(state) });
+  }
+
+  if (req.method === 'POST' && p === '/api/generate') {
+    const current = engine.currentVersion(state);
+    if (current.status === 'ready') {
+      return sendJson(res, 200, { job: null, version: current });
+    }
+    const { jobId, done } = provider.request(current.brief.fingerprint);
+    engine.requestGeneration(state, jobId);
+    saveState();
+    // Resolve asynchronously; superseded/mismatched results are rejected by the engine.
+    done.then(({ bundle, error }) => {
+      engine.resolveGeneration(state, jobId, bundle, error);
+      saveState();
+    });
+    return sendJson(res, 202, { jobId, fingerprint: current.brief.fingerprint });
+  }
+
+  if (req.method === 'POST' && p === '/api/approve') {
+    const v = engine.approve(state, body.versionId, body.friend);
+    saveState();
+    return sendJson(res, 200, { version: v, status: engine.giftStatus(state) });
+  }
+
+  if (req.method === 'POST' && p === '/api/request-change') {
+    const v = engine.requestChange(state, body.versionId, body.friend, body.note);
+    saveState();
+    return sendJson(res, 200, { version: v, status: engine.giftStatus(state) });
+  }
+
+  if (req.method === 'POST' && p === '/api/accept-quote') {
+    const v = engine.acceptQuote(state, body.versionId);
+    saveState();
+    return sendJson(res, 200, { version: v, status: engine.giftStatus(state) });
+  }
+
+  if (req.method === 'POST' && p === '/api/refresh-price') {
+    const v = engine.refreshPrice(state, body.versionId, body.quote);
+    saveState();
+    return sendJson(res, 200, { version: v, status: engine.giftStatus(state) });
+  }
+
+  if (req.method === 'POST' && p === '/api/reset') {
+    state = engine.createState(SEED);
+    saveState();
+    return sendJson(res, 200, { state, status: engine.giftStatus(state) });
+  }
+
+  sendJson(res, 404, { error: 'unknown endpoint' });
+}
+
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  if (url.pathname.startsWith('/api/')) {
+    handleApi(req, res, url).catch((e) => clientError(res, e));
+  } else {
+    serveStatic(res, decodeURIComponent(url.pathname));
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`one-gift-many-people demo → http://localhost:${PORT}`);
+});
