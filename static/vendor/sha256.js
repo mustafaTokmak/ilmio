@@ -1,4 +1,5 @@
 ;(function(){
+;(function(){
 /* Compact SHA-256 (hex) — matches node:crypto sha256 output exactly. */
 function sha256hex(str) {
   const K = [
@@ -38,4 +39,5 @@ function sha256hex(str) {
 }
 if (typeof module !== 'undefined') module.exports = { sha256hex };
 if (typeof window !== 'undefined') window.sha256hex = sha256hex;
+})();
 })();

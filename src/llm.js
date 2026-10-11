@@ -88,7 +88,9 @@ function createLlm(apiKey, model = DEFAULT_MODEL) {
 
   // Personalized brainstorm: suggest memories a friend could add (inside jokes,
   // shared rituals, places) each paired with the design detail it would become.
-  async function suggest(gift, who, contributions, count = 3) {
+  // `hint` steers the ideas ("something about cats"); `avoid` lists ideas
+  // already shown so repeated calls keep returning fresh ones.
+  async function suggest(gift, who, contributions, count = 3, { hint = '', avoid = [] } = {}) {
     const taken = Object.values(contributions || {}).filter(Boolean).map((c) => c.text.trim()).filter(Boolean);
     const text = await chat(apiKey, model, [
       {
@@ -105,7 +107,9 @@ function createLlm(apiKey, model = DEFAULT_MODEL) {
         content:
           `Gift: a ${gift.category} for ${gift.recipient}'s ${gift.occasion}.\n` +
           `Writing for: ${who}.\n` +
+          (hint ? `They want ideas about: ${hint}\n` : '') +
           (taken.length ? `Already used by others (avoid similar): ${taken.join(' | ')}\n` : '') +
+          (avoid.length ? `Already suggested (give different ones): ${avoid.join(' | ')}\n` : '') +
           `Give ${count} diverse suggestions:`,
       },
     ], { temperature: 0.9, maxTokens: 350 });

@@ -15,16 +15,28 @@ let joinInfluence = null;
 
 /* ── api ─────────────────────────────────────────────── */
 
+function code() {
+  return localStorage.getItem('ogmp-room') || 'demo';
+}
+function setCode(c) {
+  localStorage.setItem('ogmp-room', c);
+}
+
 async function api(path, body) {
+  body = Object.assign({ code: code() }, body || {});
   if (window.ogmpLocal) return window.ogmpLocal.api(path, body);
   const res = await fetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body || {}),
+    body: JSON.stringify(body),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || res.statusText);
   return data;
+}
+
+function inviteUrl() {
+  return `${location.origin}${location.pathname}#/join/${code()}`;
 }
 
 /* ── routing ─────────────────────────────────────────── */
@@ -42,7 +54,8 @@ function name(f) {
 }
 
 function go(name) {
-  location.hash = '#/' + name;
+  if (name === 'room') location.hash = `#/room/${code()}`;
+  else location.hash = '#/' + name;
 }
 
 function showScreen(name) {
@@ -50,11 +63,19 @@ function showScreen(name) {
   const scr = document.getElementById('screen-' + name);
   if (scr) scr.classList.remove('hidden');
   if (name === 'room') refresh();
+  if (name === 'join') renderJoin();
 }
 
 function route() {
-  const h = (location.hash || '#/welcome').replace('#/', '');
-  if (h === 'organize' || h === 'join' || h === 'room') showScreen(h);
+  const parts = (location.hash || '#/welcome').replace('#/', '').split('/');
+  const h = parts[0];
+  if (h === 'room') {
+    if (parts[1]) setCode(parts[1]);
+    showScreen('room');
+  } else if (h === 'join') {
+    if (parts[1]) setCode(parts[1]);
+    showScreen('join');
+  } else if (h === 'organize') showScreen('organize');
   else showScreen('welcome');
 }
 
@@ -65,10 +86,23 @@ document.querySelectorAll('[data-go]').forEach((b) => {
 
 /* ── state fetch + poll ──────────────────────────────── */
 
+async function fetchState() {
+  if (window.ogmpLocal) return window.ogmpLocal.state(code());
+  const res = await fetch(`/api/state?code=${encodeURIComponent(code())}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
 async function refresh() {
-  const data = window.ogmpLocal
-    ? window.ogmpLocal.state()
-    : await (await fetch('/api/state')).json();
+  let data;
+  try {
+    data = await fetchState();
+  } catch (e) {
+    last = null;
+    document.getElementById('resume-room').classList.add('hidden');
+    return;
+  }
   last = data;
   render(data.state, data.status);
   document.getElementById('resume-room').classList.remove('hidden');
@@ -77,9 +111,7 @@ async function refresh() {
   if (anyRunning && !polling) {
     polling = true;
     const tick = async () => {
-      const d = window.ogmpLocal
-        ? window.ogmpLocal.state()
-        : await (await fetch('/api/state')).json();
+      const d = await fetchState();
       last = d;
       render(d.state, d.status);
       if (Object.values(d.state.jobs || {}).some((j) => j.status === 'running')) {
@@ -112,6 +144,10 @@ function approvedCount(version) {
 function render(state, status) {
   document.getElementById('room-gift').textContent =
     `A ${state.gift.occasion} ${state.gift.category} for ${state.gift.recipient}`;
+  const rc = document.getElementById('room-code');
+  if (rc) rc.textContent = `room ${code()}`;
+  const invite = document.getElementById('room-invite');
+  if (invite) invite.textContent = `attendee link: ${inviteUrl()}`;
   document.getElementById('story-recipient').textContent = state.gift.recipient;
   renderRoleSwitch();
   renderFriends(state);
@@ -156,6 +192,56 @@ function renderFriends(state) {
   }
 }
 
+// Shared brainstorm panel: shows 3 idea chips at a time; an optional "steer"
+// input plus a "3 more ideas" button keeps pulling fresh suggestions — each
+// new batch avoids the ones already shown. Engine label is honest: OpenRouter
+// on the keyed server, the local demo pool on the static build.
+function ideaPanel(friend, onPick) {
+  const box = el('div', 'ideas hidden');
+  const chips = el('div', 'idea-chips');
+  const shown = new Set();
+  const steer = el('input', 'steer');
+  steer.placeholder = 'steer it — e.g. "something about cats" (optional)';
+  const more = el('button', 'secondary', '3 more ideas →');
+  const meta = el('p', 'meta');
+
+  box.load = async (fOverride) => {
+    const f = fOverride || friend;
+    more.disabled = true;
+    try {
+      const avoid = [...shown];
+      const { ideas, engine } = window.ogmpLocal
+        ? window.ogmpLocal.suggest(code(), f, { hint: steer.value, avoid })
+        : await (await fetch(
+            `/api/suggest?friend=${f}&code=${encodeURIComponent(code())}` +
+            `&hint=${encodeURIComponent(steer.value)}&avoid=${encodeURIComponent(avoid.join('|'))}`
+          )).json();
+      for (const idea of ideas) {
+        shown.add(idea.memory);
+        const chip = el('div', 'idea-chip');
+        chip.appendChild(el('span', 'idea-memory', `“${idea.memory}”`));
+        chip.appendChild(el('span', 'idea-influence', `→ ${idea.influence}`));
+        chip.onclick = () => { onPick(idea); box.classList.add('hidden'); };
+        chips.appendChild(chip);
+      }
+      meta.textContent = engine && engine.startsWith('openrouter')
+        ? 'AI suggestions via OpenRouter — pick one or write your own'
+        : 'demo suggestions — pick one or write your own';
+    } catch (e) {
+      meta.textContent = e.message;
+    } finally {
+      more.disabled = false;
+    }
+  };
+  more.onclick = () => box.load();
+
+  box.appendChild(chips);
+  box.appendChild(steer);
+  box.appendChild(more);
+  box.appendChild(meta);
+  return box;
+}
+
 function contributionEditor(f) {
   const frag = document.createDocumentFragment();
   const ta = el('textarea');
@@ -164,23 +250,12 @@ function contributionEditor(f) {
   frag.appendChild(ta);
 
   let pickedInfluence = null;
-  const ideasBox = el('div', 'ideas hidden');
+  const ideasBox = ideaPanel(f, (idea) => { ta.value = idea.memory; pickedInfluence = idea.influence; });
   const brainstormBtn = el('button', 'secondary', 'Need ideas?');
   brainstormBtn.onclick = async () => {
     if (!ideasBox.classList.contains('hidden')) { ideasBox.classList.add('hidden'); return; }
-    const { ideas } = window.ogmpLocal
-      ? window.ogmpLocal.suggest(f)
-      : await (await fetch(`/api/suggest?friend=${f}`)).json();
-    ideasBox.innerHTML = '';
-    for (const idea of ideas) {
-      const chip = el('div', 'idea-chip');
-      chip.appendChild(el('span', 'idea-memory', `“${idea.memory}”`));
-      chip.appendChild(el('span', 'idea-influence', `→ ${idea.influence}`));
-      chip.onclick = () => { ta.value = idea.memory; pickedInfluence = idea.influence; ideasBox.classList.add('hidden'); };
-      ideasBox.appendChild(chip);
-    }
-    ideasBox.appendChild(el('p', 'meta', 'demo suggestions — pick one or write your own'));
     ideasBox.classList.remove('hidden');
+    ideasBox.load();
   };
   frag.appendChild(brainstormBtn);
   frag.appendChild(ideasBox);
@@ -432,7 +507,7 @@ document.getElementById('org-create').onclick = async () => {
   const btn = document.getElementById('org-create');
   btn.disabled = true;
   try {
-    await api('/api/gift', {
+    const res = await api('/api/gift', {
       recipient: document.getElementById('org-recipient').value,
       occasion: document.getElementById('org-occasion').value,
       category: document.getElementById('org-category').value,
@@ -443,6 +518,7 @@ document.getElementById('org-create').onclick = async () => {
       },
       prefill: document.getElementById('org-prefill').checked,
     });
+    if (res.code) setCode(res.code);
     setRole('host');
     go('room');
   } catch (e) {
@@ -453,6 +529,33 @@ document.getElementById('org-create').onclick = async () => {
 };
 
 /* ── attendee onboarding ─────────────────────────────── */
+
+// Join screen: with a valid room code the friend picker shows; without one
+// (or if the code is wrong) the code-entry frame shows instead.
+async function renderJoin() {
+  const entry = document.getElementById('join-entry');
+  const pick = document.getElementById('join-pick');
+  entry.classList.add('hidden');
+  pick.classList.add('hidden');
+  document.getElementById('join-write').classList.add('hidden');
+  document.getElementById('join-done').classList.add('hidden');
+  try {
+    const data = await fetchState();
+    last = data;
+    renderJoinPick();
+    pick.classList.remove('hidden');
+  } catch {
+    entry.classList.remove('hidden');
+  }
+}
+
+document.getElementById('join-code-go').onclick = async () => {
+  const c = document.getElementById('join-code').value.trim();
+  if (!c) return;
+  setCode(c);
+  location.hash = `#/join/${c}`;
+  renderJoin();
+};
 
 function renderJoinPick() {
   const grid = document.getElementById('join-who');
@@ -497,26 +600,19 @@ document.getElementById('join-back').onclick = () => {
   document.getElementById('join-pick').classList.remove('hidden');
 };
 
+const joinIdeaPanel = ideaPanel(null, (idea) => {
+  document.getElementById('join-text').value = idea.memory;
+  joinInfluence = idea.influence;
+  document.getElementById('join-ideas').classList.add('hidden');
+});
+document.getElementById('join-ideas').replaceWith(joinIdeaPanel);
+joinIdeaPanel.id = 'join-ideas';
+
 document.getElementById('join-brainstorm').onclick = async () => {
-  const box = document.getElementById('join-ideas');
+  const box = joinIdeaPanel;
   if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
-  const { ideas } = window.ogmpLocal
-    ? window.ogmpLocal.suggest(joinFriend)
-    : await (await fetch(`/api/suggest?friend=${joinFriend}`)).json();
-  box.innerHTML = '';
-  for (const idea of ideas) {
-    const chip = el('div', 'idea-chip');
-    chip.appendChild(el('span', 'idea-memory', `“${idea.memory}”`));
-    chip.appendChild(el('span', 'idea-influence', `→ ${idea.influence}`));
-    chip.onclick = () => {
-      document.getElementById('join-text').value = idea.memory;
-      joinInfluence = idea.influence;
-      box.classList.add('hidden');
-    };
-    box.appendChild(chip);
-  }
-  box.appendChild(el('p', 'meta', 'demo suggestions — pick one or write your own'));
   box.classList.remove('hidden');
+  box.load(joinFriend);
 };
 
 document.getElementById('join-submit').onclick = async () => {
@@ -544,6 +640,9 @@ document.getElementById('join-submit').onclick = async () => {
 };
 
 document.getElementById('join-watch').onclick = () => go('room');
+document.getElementById('join-code').onkeydown = (e) => {
+  if (e.key === 'Enter') document.getElementById('join-code-go').click();
+};
 
 /* ── reset + boot ────────────────────────────────────── */
 

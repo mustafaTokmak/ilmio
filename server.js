@@ -3,6 +3,7 @@
 // Local demo server — Node built-ins only, no framework.
 // Serves public/ and a small JSON API over the pure state engine in src/state.js.
 
+const crypto = require('node:crypto');
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -35,7 +36,44 @@ const SEED = {
   },
 };
 
-let state = loadState();
+// Rooms: each gift lives under a unique shareable code. The seeded demo room
+// keeps the legacy data/state.json file; other rooms persist as
+// data/state-<code>.json. A judge can create their own gift without touching
+// anyone else's.
+const rooms = new Map();
+
+function roomFile(code) {
+  return code === 'demo' ? STATE_FILE : path.join(DATA_DIR, `state-${code}.json`);
+}
+
+function roomFor(code, { create = false } = {}) {
+  code = String(code || 'demo').slice(0, 40);
+  if (rooms.has(code)) return rooms.get(code);
+  let s = null;
+  try {
+    s = engine.deserialize(fs.readFileSync(roomFile(code), 'utf8'));
+  } catch {
+    if (code === 'demo' || create) s = engine.createState(SEED);
+  }
+  if (!s) return null;
+  rooms.set(code, s);
+  return s;
+}
+
+function saveRoom(code) {
+  const s = rooms.get(code);
+  if (!s) return;
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(roomFile(code), engine.serialize(s));
+}
+
+function newRoomCode(recipient) {
+  const slug = String(recipient || 'gift').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 12) || 'gift';
+  const rand = crypto.randomBytes(2).toString('hex');
+  return `${slug}-${rand}`;
+}
+
+let state = roomFor('demo', { create: true });
 
 // Cache-first: recorded bundles always win; a miss calls real Arcade when a
 // key is present, else reports provider-empty. The key stays server-only —
@@ -51,17 +89,10 @@ const llm = process.env.OPENROUTER_API_KEY
   ? createLlm(process.env.OPENROUTER_API_KEY, process.env.OPENROUTER_MODEL || undefined)
   : null;
 
-function loadState() {
-  try {
-    return engine.deserialize(fs.readFileSync(STATE_FILE, 'utf8'));
-  } catch {
-    return engine.createState(SEED);
-  }
-}
-
-function saveState() {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(STATE_FILE, engine.serialize(state));
+// A room code comes from the request body (POST) or ?code= (GET); the seeded
+// demo room answers when none is given so old links keep working.
+function codeOf(url, body) {
+  return (body && body.code) || url.searchParams.get('code') || 'demo';
 }
 
 function sendJson(res, status, body) {
@@ -132,9 +163,21 @@ async function handleApi(req, res, url) {
   const p = url.pathname;
   const body = req.method === 'POST' ? await readBody(req) : {};
 
+  const code = codeOf(url, body);
   if (req.method === 'GET' && p === '/api/state') {
-    return sendJson(res, 200, { state, status: engine.giftStatus(state) });
+    const room = roomFor(code);
+    if (!room) return sendJson(res, 404, { error: `room not found: ${code}` });
+    return sendJson(res, 200, { code, state: room, status: engine.giftStatus(room) });
   }
+  // /api/gift always creates a fresh room — it never 404s on the code.
+  if (req.method === 'POST' && p === '/api/gift') { /* handled below */ }
+  const state = (req.method === 'POST' && p === '/api/gift')
+    ? null
+    : roomFor(code);
+  if (req.method !== 'POST' || p !== '/api/gift') {
+    if (!state) return sendJson(res, 404, { error: `room not found: ${code}` });
+  }
+  const saveState = () => saveRoom(code);
 
   if (req.method === 'POST' && p === '/api/contributions') {
     // "Understand": when the friend only writes a memory (no explicit design
@@ -208,10 +251,12 @@ async function handleApi(req, res, url) {
       return sendJson(res, 400, { error: `unknown friend: ${friend}` });
     }
     const count = Number(url.searchParams.get('count')) || 3;
+    const hint = (url.searchParams.get('hint') || '').slice(0, 200);
+    const avoid = (url.searchParams.get('avoid') || '').split('|').map((s) => s.trim()).filter(Boolean).slice(0, 30);
     let ideas = null;
     let ideasEngine = 'local-template';
     if (llm) {
-      ideas = await llm.suggest(state.gift, engine.friendName(state.gift, friend), state.contributions, count);
+      ideas = await llm.suggest(state.gift, engine.friendName(state.gift, friend), state.contributions, count, { hint, avoid });
       if (ideas) ideasEngine = llm.engine;
     }
     if (!ideas) ideas = suggest(state.gift, friend, state.contributions, count);
@@ -261,15 +306,18 @@ async function handleApi(req, res, url) {
     const contributions = body.prefill
       ? SEED.contributions
       : { alex: null, deniz: null, sam: null };
-    state = engine.createState({ gift, contributions });
-    saveState();
-    return sendJson(res, 200, { state, status: engine.giftStatus(state) });
+    const newCode = newRoomCode(gift.recipient);
+    const fresh = engine.createState({ gift, contributions });
+    rooms.set(newCode, fresh);
+    saveRoom(newCode);
+    return sendJson(res, 200, { code: newCode, state: fresh, status: engine.giftStatus(fresh) });
   }
 
   if (req.method === 'POST' && p === '/api/reset') {
-    state = engine.createState(SEED);
+    const fresh = engine.createState(SEED);
+    rooms.set(code, fresh);
     saveState();
-    return sendJson(res, 200, { state, status: engine.giftStatus(state) });
+    return sendJson(res, 200, { code, state: fresh, status: engine.giftStatus(fresh) });
   }
 
   sendJson(res, 404, { error: 'unknown endpoint' });

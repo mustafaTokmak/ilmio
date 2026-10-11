@@ -73,6 +73,17 @@
 
   <!-- ══ Attendee onboarding ══ -->
   <section id="screen-join" class="screen onboarding hidden">
+    <div class="frame narrow hidden" id="join-entry">
+      <img class="mascot small" src="ilmio.png" alt="" />
+      <p class="step-label">Contributor · step 1 of 2</p>
+      <h2>Join a gift</h2>
+      <p class="hint" id="join-entry-hint">Enter the room code your organizer shared — it looks like <code>maya-a1b2</code>.</p>
+      <label>Room code
+        <input id="join-code" type="text" placeholder="maya-a1b2" />
+      </label>
+      <button class="big" id="join-code-go">Join →</button>
+      <button class="link" data-go="welcome">← back</button>
+    </div>
     <div class="frame narrow" id="join-pick">
       <img class="mascot small" src="ilmio.png" alt="" />
       <p class="step-label">Contributor · step 1 of 2</p>
@@ -110,6 +121,7 @@
       <div>
         <h1 id="room-title"><img class="mascot tiny" src="ilmio.png" alt="" /> ilmio</h1>
         <p id="room-gift" class="gift-line"></p>
+        <p class="meta"><span id="room-code"></span> · <span id="room-invite"></span></p>
       </div>
       <div class="role-box">
         <span class="meta">view as</span>
