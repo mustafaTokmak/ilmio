@@ -16,3 +16,4 @@ knowledge:
   - name: notes
     contents: |
       Demo state persists to data/state.json (gitignored); delete it or POST /api/reset to reseed.
+      Run npm run build:static after editing public/ or src/state|suggest|narrative.js; test/static.test.js fails if static/ drifts.

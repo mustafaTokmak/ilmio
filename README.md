@@ -18,26 +18,45 @@ A group gift usually reflects whoever buys it. Here, every friend adds a memory 
 
 ## Build
 
-One local page with five states (contributions → first product → changed brief → revised product → approved story card), a deterministic brief builder, version-bound approvals, an activity trail, and a reset control. Standard HTML/CSS/JavaScript with a small local Node server; recorded result bundles keep reload and offline rehearsal working.
+The flow goes from welcome to organizing or joining a gift, then into a room with a candidate tier board, approvals, and a story card. The room also has a deterministic brief builder, version-bound approvals, an activity trail, and a reset control. It uses standard HTML/CSS/JavaScript with a small local Node server; recorded result bundles keep reload and offline rehearsal working.
 
 ## Run
 
 Requires Node 18+. No dependencies.
 
 ```bash
-node server.js        # serves the demo on http://localhost:3847
-node --test           # runs the state-rule checks
+npm start                  # serves the demo on http://localhost:3847
+npm test                   # runs the test suite
+npm run build:static       # regenerate the client-only static build
 ```
 
-`GENERATION_LATENCY_MS` tunes the simulated generation wait (default 2500 ms).
+| Environment variable | Default | Purpose |
+| --- | --- | --- |
+| `PORT` | `3847` | Port for the local Node server. |
+| `GENERATION_LATENCY_MS` | `2500` | Simulated wait before a recorded bundle is returned. |
+| `ARCADE_API_KEY` | unset | Enables live Arcade generation for briefs without a recorded bundle; without it, only recorded bundles are available. |
+| `OPENROUTER_API_KEY` | unset | Enables LLM memory interpretation, narrative writing, and brainstorm suggestions; local composers are used as fallbacks. |
+| `OPENROUTER_MODEL` | `anthropic/claude-haiku-5.5` | OpenRouter model used when `OPENROUTER_API_KEY` is set. |
 
 ## Layout
 
 - `src/state.js` — pure state engine: brief builder, version lifecycle, approvals, quote rules
-- `src/provider.js` — provider adapter boundary (recorded bundles today; Arcade API later)
+- `src/provider.js` — cache-first recorded bundles with an optional Arcade API fallback
+- `src/arcade.js` — Arcade image-generation provider
+- `src/llm.js` — optional OpenRouter memory interpretation and composition
+- `src/suggest.js` — local brainstorm suggestions
+- `src/narrative.js` — local gift-story composer
 - `server.js` — dependency-free Node server + JSON API + state persistence
 - `public/` — the single-page demo
 - `bundles/` — recorded results keyed by brief fingerprint, with provenance labels
-- `test/` — `node:test` checks for the state and quote rules
+- `scripts/regen-bundles.js` — regenerate recorded bundles (requires `ARCADE_API_KEY`)
+- `scripts/build-static.js` — generate the static hosting build
+- `static/` — client-only build for static hosting, generated from `public/` and `src/state.js`, `src/suggest.js`, and `src/narrative.js`; `static-server.js`, `vendor/sha256.js`, and `bundles/` are maintained separately. The candidate tier board requires the Node server.
+- `test/` — `node:test` checks for state rules and static-build consistency
+- `demo-voiceover-transcript.md` — demo voiceover transcript
 
 Prepared bundles in `bundles/` are labeled illustrations, not Arcade API responses.
+
+## Static deploy
+
+Serve the contents of `static/` from any static host. Room state is stored in the browser's `localStorage`, separately for each room code.
