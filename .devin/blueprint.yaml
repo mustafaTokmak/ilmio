@@ -1,0 +1,18 @@
+# https://docs.devin.ai/onboard-devin/environment-yaml
+# Commands run from the repo root.
+# One-time setup: Node is preinstalled via nvm but off PATH.
+initialize: |
+  echo "PATH=$(ls -d $HOME/.nvm/versions/node/*/bin | tail -1):$PATH" >> $ENVRC
+# No project dependencies — nothing to install.
+maintenance: |
+  true
+knowledge:
+  - name: test
+    contents: |
+      node --test
+  - name: startup
+    contents: |
+      node server.js   # serves the demo on http://localhost:3847
+  - name: notes
+    contents: |
+      Demo state persists to data/state.json (gitignored); delete it or POST /api/reset to reseed.
