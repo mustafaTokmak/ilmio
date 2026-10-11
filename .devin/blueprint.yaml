@@ -13,6 +13,9 @@ knowledge:
   - name: startup
     contents: |
       node server.js   # serves the demo on http://localhost:3847
+  - name: static
+    contents: |
+      python3 -m http.server 8100 --directory static   # backend-free static build; state is browser localStorage, no credentials
   - name: notes
     contents: |
       Demo state persists to data/state.json (gitignored); delete it or POST /api/reset to reseed.
