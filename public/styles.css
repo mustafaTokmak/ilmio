@@ -61,6 +61,21 @@ code { background: var(--paper-deep); padding: 0.1rem 0.35rem; border-radius: 4p
 .frame.narrow h2 { font-size: 1.9rem; margin: 0.2rem 0 0.8rem; }
 .frame.narrow .mascot.small { margin-left: 0; margin-bottom: 0.4rem; }
 
+.tile-strip {
+  display: block;
+  width: 100%;
+  height: 58px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin: 0 auto 1.4rem;
+}
+.tile-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
 .mascot { width: 150px; display: block; margin: 0 auto 0.5rem; }
 .mascot.small { width: 90px; margin-bottom: 0.8rem; }
 .mascot.tiny {

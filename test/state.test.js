@@ -259,3 +259,69 @@ test('attachNarrative stores provenance label on the version', () => {
   assert.ok(v.narrative.label.includes('not a cloud AI'));
   assert.ok(v.narrative.generatedAt);
 });
+
+// --- additional use cases ---
+
+test('editing an existing contribution re-stales the current proposal', () => {
+  const state = readyState();
+  engine.approve(state, 'v1', 'alex');
+  const v2 = engine.submitContribution(state, 'alex', 'Lemon trees in grandma\'s courtyard');
+  assert.equal(state.versions.find((v) => v.id === 'v1').status, 'stale');
+  assert.equal(v2.contributionSnapshot.alex.text, "Lemon trees in grandma's courtyard");
+  assert.equal(engine.giftStatus(state).unanimous, false);
+});
+
+test('all three memories in at once produces one version only', () => {
+  const state = engine.createState({
+    gift: SEED.gift,
+    contributions: {
+      alex: { text: 'Lemon sprigs from our garden walks' },
+      deniz: { text: 'Blue tiled courtyards and Turkish motifs' },
+      sam: { text: 'Calm home. Minimal pattern. No lettering.' },
+    },
+  });
+  assert.equal(state.versions.length, 1);
+  assert.equal(state.versions[0].brief.influences.length, 3);
+});
+
+test('organizer can create a gift for a different occasion and category', () => {
+  const state = engine.createState({
+    gift: { recipient: 'Elif', occasion: 'wedding', category: 'table runner' },
+    contributions: { alex: null, deniz: null, sam: null },
+  });
+  const v = engine.currentVersion(state);
+  assert.equal(v.brief.occasion, 'wedding');
+  assert.ok(v.brief.text.includes('Elif'));
+  assert.ok(v.brief.text.includes('table runner'));
+  assert.equal(v.brief.influences.length, 0);
+});
+
+test('requestChange on a stale version is rejected', () => {
+  const state = readyState();
+  engine.submitContribution(state, 'sam', 'Calm home.');
+  assert.throws(() => engine.requestChange(state, 'v1', 'sam', 'bigger border'), /stale-version/);
+});
+
+test('suggestions adapt to the occasion', () => {
+  const wedding = suggest({ recipient: 'Elif', occasion: 'wedding', category: 'table runner' }, 'sam', { sam: null }, 10);
+  const house = suggest(SEED.gift, 'sam', SEED.contributions, 10);
+  assert.ok(Array.isArray(wedding) && wedding.length > 0);
+  assert.ok(wedding.every((i) => i.memory && i.influence));
+  assert.notDeepEqual(wedding.map((i) => i.memory), house.map((i) => i.memory));
+});
+
+test('suggestions for an unknown occasion fall back to defaults', () => {
+  const ideas = suggest({ recipient: 'X', occasion: 'retirement', category: 'mug' }, 'alex', {}, 3);
+  assert.equal(ideas.length, 3);
+  assert.ok(ideas.every((i) => i.memory && i.influence));
+});
+
+test('narrative adapts when a friend is missing from the version', () => {
+  const state = readyState();
+  const v = engine.currentVersion(state);
+  const text = narrate(v, state.gift);
+  assert.ok(text.includes('Alex'));
+  assert.ok(text.includes('Deniz'));
+  assert.ok(!text.includes('Sam,')); // Sam contributed nothing to v1
+  assert.ok(text.includes('2 friends'));
+});
