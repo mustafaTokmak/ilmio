@@ -5,6 +5,10 @@
   "description": "Group gift demo for Shopping 3.0 — every contribution changes the proposal",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "build:static": "node scripts/build-static.js"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

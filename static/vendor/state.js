@@ -268,6 +268,23 @@ function resolveGeneration(state, jobId, bundle, error) {
   return { ok: true, version };
 }
 
+// Candidate pick: the room's chosen candidate bundle becomes the current
+// version's proposal. Approvals reset — consent binds to this exact result.
+// (Candidate fingerprints intentionally differ from the brief fingerprint:
+// each direction is its own generated artifact; provenance stays on the bundle.)
+function attachCandidate(state, bundle, direction) {
+  const version = currentVersion(state);
+  if (!version) throw new Error('no current version');
+  if (!bundle) throw new Error('candidate has no result');
+  version.bundle = bundle;
+  version.quote = bundle.quote ? { ...bundle.quote, revision: 1, refreshedAt: now() } : null;
+  version.status = 'ready';
+  version.pickedCandidate = direction;
+  version.approvals = freshApprovals();
+  log(state, 'candidate-picked', `${version.id} proposal set from ranked candidate: ${direction}`);
+  return version;
+}
+
 function approve(state, versionId, friend) {
   const version = state.versions.find((v) => v.id === versionId);
   if (!version) throw new Error(`unknown version: ${versionId}`);
@@ -375,6 +392,7 @@ const OGMP_STATE = {
   submitContribution,
   requestGeneration,
   resolveGeneration,
+  attachCandidate,
   approve,
   requestChange,
   acceptQuote,
