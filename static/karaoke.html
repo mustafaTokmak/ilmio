@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ilmio — voiceover karaoke</title>
+  <link rel="icon" type="image/png" href="ilmio.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #16130f; --ink-2: #221e18; --paper: #f6f3ec; --muted: #8c8478;
+      --lime: #d8f24f; --line: #3a342b;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--ink); color: var(--paper);
+      font-family: Fraunces, Georgia, 'Times New Roman', serif;
+      display: grid; grid-template-rows: auto 1fr auto; overflow: hidden;
+    }
+    button, select, label { font: inherit; }
+    header {
+      display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+      padding: 0.7rem 1.2rem; border-bottom: 1px solid var(--line); background: var(--ink-2);
+      font-family: system-ui, sans-serif; font-size: 0.9rem;
+    }
+    header h1 { font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 1.15rem; margin: 0 0.6rem 0 0; }
+    header h1 span { color: var(--muted); font-weight: 400; }
+    .btn {
+      background: transparent; color: var(--paper); border: 1px solid var(--line);
+      border-radius: 999px; padding: 0.4rem 0.9rem; cursor: pointer;
+    }
+    .btn:hover { border-color: var(--muted); }
+    .btn.primary { background: var(--lime); color: var(--ink); border-color: var(--lime); font-weight: 600; min-width: 6.5rem; }
+    .clock { font-variant-numeric: tabular-nums; font-size: 1.05rem; margin-left: auto; }
+    .clock b { color: var(--lime); font-weight: 600; }
+    .opt { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); cursor: pointer; }
+    #video-file { display: none; }
+
+    main { position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr; }
+    main.with-video { grid-template-columns: minmax(0, 1fr) minmax(280px, 34vw); }
+    #prompter { position: relative; overflow: hidden; }
+    #track { position: absolute; left: 0; right: 0; top: 0; padding: 0 8vw; transition: transform 0.6s ease; }
+    .cue { padding: 1.4rem 0; opacity: 0.32; transition: opacity 0.4s; }
+    .cue.past { opacity: 0.16; }
+    .cue.active { opacity: 1; }
+    .cue.next { opacity: 0.55; }
+    .cue-head {
+      font-family: system-ui, sans-serif; font-size: 0.85rem; letter-spacing: 0.02em;
+      color: var(--muted); margin-bottom: 0.5rem; display: flex; gap: 0.8rem; align-items: baseline;
+    }
+    .cue-head .t { color: var(--lime); font-variant-numeric: tabular-nums; font-weight: 600; }
+    .cue-text { font-size: clamp(1.6rem, 3.3vw, 2.9rem); line-height: 1.38; }
+    .w { transition: color 0.12s; }
+    .cue.active .w.said { color: var(--lime); }
+    .cue.active .w.now { color: var(--lime); text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 6px; }
+    .cue.past .w { color: var(--paper); }
+    .cue-bar { height: 4px; background: var(--line); border-radius: 2px; margin-top: 0.8rem; overflow: hidden; visibility: hidden; }
+    .cue.active .cue-bar { visibility: visible; }
+    .cue-bar i { display: block; height: 100%; width: 0; background: var(--lime); }
+
+    #upnext {
+      position: absolute; top: 1rem; right: 1.2rem; font-family: system-ui, sans-serif; font-size: 0.9rem;
+      background: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 0.35rem 0.9rem;
+      color: var(--muted);
+    }
+    #upnext b { color: var(--lime); font-variant-numeric: tabular-nums; }
+
+    #side { border-left: 1px solid var(--line); padding: 1rem; display: none; flex-direction: column; gap: 0.6rem; background: var(--ink-2); }
+    main.with-video #side { display: flex; }
+    #side video { width: 100%; border-radius: 8px; background: #000; }
+    #side .meta { font-family: system-ui, sans-serif; font-size: 0.8rem; color: var(--muted); }
+
+    #countdown {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      background: rgba(22, 19, 15, 0.82); font-size: 12rem; color: var(--lime); font-weight: 600; z-index: 5;
+    }
+    #countdown.on { display: flex; }
+
+    footer { padding: 0.6rem 1.2rem 0.9rem; border-top: 1px solid var(--line); background: var(--ink-2); font-family: system-ui, sans-serif; }
+    #timeline { position: relative; height: 22px; cursor: pointer; }
+    #timeline .rail { position: absolute; left: 0; right: 0; top: 9px; height: 4px; background: var(--line); border-radius: 2px; }
+    #timeline .seg { position: absolute; top: 6px; height: 10px; background: #4a4438; border-radius: 3px; }
+    #timeline .seg.active { background: #7d8a2e; }
+    #timeline .head { position: absolute; top: 2px; width: 3px; height: 18px; background: var(--lime); border-radius: 2px; transform: translateX(-1px); }
+    .keys { font-size: 0.75rem; color: var(--muted); margin-top: 0.45rem; }
+    .keys kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 0.3rem; color: var(--paper); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ilmio <span>· voiceover karaoke</span></h1>
+    <button id="play" class="btn primary">▶ Start</button>
+    <button id="restart" class="btn">↺ Restart</button>
+    <label class="btn" for="video-file">Load video…</label>
+    <input id="video-file" type="file" accept="video/*" />
+    <label class="opt"><input id="opt-countdown" type="checkbox" checked /> 3-2-1</label>
+    <label class="opt"><input id="opt-mute" type="checkbox" checked /> mute video</label>
+    <span class="clock"><b id="now">0:00.0</b> / <span id="total">0:00</span></span>
+  </header>
+
+  <main id="main">
+    <div id="prompter">
+      <div id="track"></div>
+      <div id="upnext"></div>
+    </div>
+    <aside id="side">
+      <video id="video" playsinline muted></video>
+      <div class="meta" id="video-meta"></div>
+    </aside>
+    <div id="countdown"></div>
+  </main>
+
+  <footer>
+    <div id="timeline"><div class="rail"></div><div class="head" id="head"></div></div>
+    <div class="keys">
+      <kbd>Space</kbd> play/pause · <kbd>←</kbd>/<kbd>→</kbd> prev/next line · <kbd>R</kbd> restart · click timeline to seek.
+      Load the video to lock the lines to its playback; without it, the page runs its own clock.
+    </div>
+  </footer>
+
+  <script>
+  // Script from demo-voiceover-transcript.md, timed to ilmio-demo-90s-edited.mp4.
+  const CUES = [
+    { start: 0, end: 8, scene: 'Welcome screen: ilmio, mascot, tile strip',
+      text: 'A group gift usually reflects whoever bought it. ilmio makes it different — every friend adds a memory, and together, they make one gift.' },
+    { start: 8, end: 20, scene: 'Organizer onboarding → room maya-e085 with attendee link',
+      text: "I'm organizing a gift for Maya's housewarming — I name the friends, and ilmio gives me a room with a share link. That's all the organizer does." },
+    { start: 20, end: 36, scene: 'Generate v1: dense İznik pillow appears, Arcade quote',
+      text: 'Alex and Deniz already added theirs — garden lemons, blue tiled courtyards. The design brief is literally composed from their memories. And now, one click — Arcade turns that brief into a real product. An İznik pillow cover, 18 by 18 canvas, forty-three fifty-six — generated, priced, ready to order.' },
+    { start: 36, end: 45, scene: 'Alex and Deniz approve → 2/3',
+      text: 'Alex approves. Deniz approves. Two of three — and each approval is bound to this exact version of the gift.' },
+    { start: 45, end: 60, scene: 'Sam joins: brainstorm ideas appear, submits memory',
+      text: "Now Sam joins late. He doesn't know what to write — so ilmio brainstorms with AI, real inside-joke ideas, and he can steer it, again and again. He adds his own instead: 'calm home, minimal pattern, no lettering.'" },
+    { start: 60, end: 70, scene: 'v1 superseded: approvals reset to 0/3',
+      text: 'Watch what happens. New memory, new brief — v1 is superseded, and the earlier approvals stop applying. The gift changed, so the consent resets.' },
+    { start: 70, end: 80, scene: 'v2 generates: calmer medallion pillow',
+      text: "v2 generates — same memories, one more voice. Look how much quieter it is: one medallion, thin border, all that air. That's Sam's memory in the design." },
+    { start: 80, end: 90, scene: 'All three approve → unanimous',
+      text: 'Now everyone approves this specific result — three of three.' },
+    { start: 90, end: 95, scene: 'Story card + AI narrative',
+      text: "And Maya doesn't just get a pillow — she gets the story. Every memory, visible in the design, composed by AI into the card that ships with it. Everyone adds a memory. Together, you make one gift. That's ilmio." },
+  ];
+  const TOTAL = CUES[CUES.length - 1].end;
+  const TAIL = 0.4; // seconds of breathing room at the end of each cue
+
+  const $ = (id) => document.getElementById(id);
+  const fmt = (s, tenths) => {
+    s = Math.max(0, s);
+    const m = Math.floor(s / 60), r = s - m * 60;
+    return m + ':' + (tenths ? r.toFixed(1).padStart(4, '0') : String(Math.floor(r)).padStart(2, '0'));
+  };
+
+  // Build the prompter. Each word gets a start time spread across the cue by character weight.
+  const track = $('track'), timeline = $('timeline');
+  CUES.forEach((c, i) => {
+    const words = c.text.split(/\s+/);
+    const weights = words.map((w) => w.replace(/[^\p{L}\p{N}]/gu, '').length + 2);
+    const sum = weights.reduce((a, b) => a + b, 0);
+    const span = Math.max(0.5, c.end - c.start - TAIL);
+    let acc = 0;
+    c.words = words.map((w, j) => { const at = c.start + (acc / sum) * span; acc += weights[j]; return at; });
+
+    const el = document.createElement('div');
+    el.className = 'cue';
+    el.innerHTML = `<div class="cue-head"><span class="t">${fmt(c.start)} – ${fmt(c.end)}</span><span>${c.scene}</span></div>`;
+    const tx = document.createElement('div');
+    tx.className = 'cue-text';
+    words.forEach((w, j) => {
+      const s = document.createElement('span'); s.className = 'w'; s.textContent = w;
+      tx.appendChild(s);
+      if (j < words.length - 1) tx.appendChild(document.createTextNode(' '));
+    });
+    el.appendChild(tx);
+    el.insertAdjacentHTML('beforeend', '<div class="cue-bar"><i></i></div>');
+    el.onclick = () => seek(c.start);
+    track.appendChild(el);
+    c.el = el; c.spans = tx.querySelectorAll('.w'); c.bar = el.querySelector('.cue-bar i');
+
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    seg.style.left = (c.start / TOTAL * 100) + '%';
+    seg.style.width = ((c.end - c.start) / TOTAL * 100 - 0.3) + '%';
+    seg.title = `${fmt(c.start)} · ${c.scene}`;
+    timeline.insertBefore(seg, $('head'));
+    c.seg = seg;
+  });
+  $('total').textContent = fmt(TOTAL);
+
+  // Clock: follows the loaded video if there is one, otherwise an internal timer.
+  const video = $('video');
+  let hasVideo = false, playing = false, base = 0, startedAt = 0, counting = false;
+  const now = () => hasVideo ? video.currentTime : (playing ? base + (performance.now() - startedAt) / 1000 : base);
+  const limit = () => hasVideo && isFinite(video.duration) ? Math.max(TOTAL, video.duration) : TOTAL;
+
+  function setPlaying(p) {
+    if (hasVideo) { p ? video.play() : video.pause(); }
+    else if (p) { startedAt = performance.now(); }
+    else { base = now(); }
+    playing = p;
+    $('play').textContent = p ? '❚❚ Pause' : (now() > 0 ? '▶ Resume' : '▶ Start');
+  }
+  function seek(t) {
+    t = Math.min(Math.max(0, t), limit());
+    if (hasVideo) video.currentTime = t;
+    base = t; startedAt = performance.now();
+    if (!playing) $('play').textContent = t > 0 ? '▶ Resume' : '▶ Start';
+  }
+  function toggle() {
+    if (counting) return;
+    if (playing) return setPlaying(false);
+    if (now() >= limit() - 0.05) seek(0);
+    if (!$('opt-countdown').checked) return setPlaying(true);
+    counting = true;
+    const cd = $('countdown'); let n = 3;
+    cd.textContent = n; cd.classList.add('on');
+    const iv = setInterval(() => {
+      n -= 1;
+      if (n > 0) { cd.textContent = n; return; }
+      clearInterval(iv); cd.classList.remove('on'); counting = false; setPlaying(true);
+    }, 1000);
+  }
+
+  let lastActive = -1;
+  function frame() {
+    let t = now();
+    if (!hasVideo && playing && t >= limit()) { seek(limit()); setPlaying(false); t = limit(); }
+    if (hasVideo && video.ended && playing) setPlaying(false);
+
+    let active = CUES.findIndex((c) => t >= c.start && t < c.end);
+    if (active === -1 && t >= TOTAL) active = CUES.length - 1;
+    CUES.forEach((c, i) => {
+      c.el.classList.toggle('active', i === active);
+      c.el.classList.toggle('past', t >= c.end && i !== active);
+      c.el.classList.toggle('next', i === active + 1);
+      c.seg.classList.toggle('active', i === active);
+      if (i === active) {
+        let cur = -1;
+        c.words.forEach((at, j) => { if (t >= at) cur = j; });
+        c.spans.forEach((s, j) => { s.classList.toggle('said', j < cur); s.classList.toggle('now', j === cur); });
+        c.bar.style.width = Math.min(100, (t - c.start) / (c.end - c.start) * 100) + '%';
+      }
+    });
+    if (active !== lastActive) {
+      lastActive = active;
+      const el = CUES[Math.max(0, active)].el;
+      const h = $('prompter').clientHeight;
+      track.style.transform = `translateY(${h * 0.32 - el.offsetTop}px)`;
+    }
+
+    const nx = CUES.find((c) => c.start > t);
+    const up = $('upnext');
+    if (nx && nx.start - t <= 3) { up.style.display = ''; up.innerHTML = `next line in <b>${(nx.start - t).toFixed(1)}s</b>`; }
+    else if (t >= TOTAL) { up.style.display = ''; up.innerHTML = 'done — that\'s ilmio'; }
+    else up.style.display = 'none';
+
+    $('now').textContent = fmt(t, true);
+    $('head').style.left = Math.min(100, t / TOTAL * 100) + '%';
+    requestAnimationFrame(frame);
+  }
+
+  // Controls
+  $('play').onclick = toggle;
+  $('restart').onclick = () => { setPlaying(false); seek(0); };
+  timeline.onclick = (e) => { const r = timeline.getBoundingClientRect(); seek((e.clientX - r.left) / r.width * TOTAL); };
+  const cueAt = (t) => CUES.reduce((k, c, i) => (t >= c.start - 0.01 ? i : k), 0);
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') e.target.blur();
+    if (e.code === 'Space') { e.preventDefault(); toggle(); }
+    else if (e.code === 'ArrowRight') { const i = cueAt(now()); seek(CUES[Math.min(CUES.length - 1, i + 1)].start); }
+    else if (e.code === 'ArrowLeft') { const i = cueAt(now()); const c = CUES[i]; seek(now() - c.start > 1 || i === 0 ? c.start : CUES[i - 1].start); }
+    else if (e.key === 'r' || e.key === 'R') { setPlaying(false); seek(0); }
+  });
+  $('opt-mute').onchange = (e) => { video.muted = e.target.checked; };
+  $('video-file').onchange = (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    setPlaying(false);
+    video.src = URL.createObjectURL(f);
+    video.muted = $('opt-mute').checked;
+    hasVideo = true;
+    $('main').classList.add('with-video');
+    $('video-meta').textContent = f.name;
+    video.onloadedmetadata = () => {
+      $('video-meta').textContent = `${f.name} · ${fmt(video.duration, true)}`;
+      seek(0); lastActive = -2;
+    };
+  };
+  video.onpause = () => { if (playing && !counting) { playing = false; $('play').textContent = '▶ Resume'; } };
+  video.onplay = () => { if (!playing) { playing = true; $('play').textContent = '❚❚ Pause'; } };
+  window.addEventListener('resize', () => { lastActive = -2; });
+
+  requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
