@@ -29,7 +29,7 @@ node server.js        # serves the demo on http://localhost:3847
 node --test           # runs the state-rule checks
 ```
 
-Recording the voiceover: open http://localhost:3847/karaoke.html — a teleprompter for `demo-voiceover-transcript.md` that highlights each line on its beat. Load the demo video to lock the lines to its playback.
+Recording the voiceover: open http://localhost:3847/karaoke.html — a teleprompter for `demo-voiceover-transcript.md` that highlights each line on its beat. Load the demo video to lock the lines to its playback; load a retimed transcript with **Load script…**.
 
 `GENERATION_LATENCY_MS` tunes the simulated generation wait (default 2500 ms).
 

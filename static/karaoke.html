@@ -35,7 +35,7 @@
     .clock { font-variant-numeric: tabular-nums; font-size: 1.05rem; margin-left: auto; }
     .clock b { color: var(--lime); font-weight: 600; }
     .opt { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); cursor: pointer; }
-    #video-file { display: none; }
+    #video-file, #script-file { display: none; }
 
     main { position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr; }
     main.with-video { grid-template-columns: minmax(0, 1fr) minmax(280px, 34vw); }
@@ -94,6 +94,8 @@
     <button id="restart" class="btn">↺ Restart</button>
     <label class="btn" for="video-file">Load video…</label>
     <input id="video-file" type="file" accept="video/*" />
+    <label class="btn" for="script-file">Load script…</label>
+    <input id="script-file" type="file" accept=".md,.txt,text/markdown,text/plain" />
     <label class="opt"><input id="opt-countdown" type="checkbox" checked /> 3-2-1</label>
     <label class="opt"><input id="opt-mute" type="checkbox" checked /> mute video</label>
     <span class="clock"><b id="now">0:00.0</b> / <span id="total">0:00</span></span>
@@ -119,29 +121,87 @@
     </div>
   </footer>
 
+  <script type="text/markdown" id="default-script">
+# ilmio — 90-second demo voiceover transcript
+
+Timed to the 90s demo video (welcome → candidates → tier board → approvals → Sam → v2 → story card).
+Read at a calm pace (~2.5 words/s); each block lands with its on-screen beat.
+Rehearse and record with `karaoke.html`; it parses this file via **Load script…**, so keep the
+`**m:ss – m:ss** · *scene*` header format when you retime a block.
+
+---
+
+**0:00 – 0:08** · *Welcome screen — ilmio, mascot, tile strip*
+"A group gift usually reflects whoever bought it. ilmio makes it different —
+every friend adds a memory, and together, they make one gift."
+
+**0:08 – 0:15** · *Organizer onboarding → room with share link*
+"I'm organizing Maya's housewarming gift. I name the friends,
+and ilmio gives me a room with a share link."
+
+**0:15 – 0:28** · *20 design candidates weaving → real Arcade pillows*
+"Alex and Deniz already added memories — garden lemons, blue tiled courtyards.
+AI turns them into twenty design directions, and Arcade generates every one
+as a real, priced pillow cover."
+
+**0:28 – 0:39** · *Tier board — friends drag pillows into S–F*
+"Now each friend ranks them, S to F — just drag a pillow into a tier.
+Only friends vote, not the organizer. The most-liked design becomes the proposal."
+
+**0:39 – 0:46** · *Alex and Deniz approve → 2/3*
+"Alex approves. Deniz approves. Two of three — each approval bound
+to this exact version of the gift."
+
+**0:46 – 0:58** · *Sam joins — brainstorm ideas, steer, submits memory*
+"Then Sam joins late and doesn't know what to write — so ilmio brainstorms
+with AI, and he can steer it. He adds his own: calm home, minimal pattern, no lettering."
+
+**0:58 – 1:07** · *v1 superseded — approvals reset to 0/3, new candidates weaving*
+"New memory, new brief. The old proposal is superseded, approvals reset to zero,
+and twenty fresh candidates start weaving."
+
+**1:07 – 1:18** · *Re-rank → calm medallion wins → 3/3 approve*
+"The friends rank again, and the calm design wins — one medallion, thin border,
+all that air. That's Sam's memory in the design. Three of three approve."
+
+**1:18 – 1:30** · *Story card + AI narrative*
+"And Maya doesn't just get a pillow — she gets the story: every memory,
+woven by AI into the card that ships with it.
+Everyone adds a memory. Together, you make one gift. That's ilmio."
+
+---
+
+## Tips
+- ≈ 230 words → about 90s at a calm pace. If you run long, trim the 0:39–0:46 block
+  to just "Two of three approve."
+- The Arcade line (0:15–0:28) is the required mention: real generated product, priced.
+- Times are estimates — retime each header to your edited video, then load this file
+  into the karaoke page.
+  </script>
   <script>
-  // Script from demo-voiceover-transcript.md, timed to ilmio-demo-90s-edited.mp4.
-  const CUES = [
-    { start: 0, end: 8, scene: 'Welcome screen: ilmio, mascot, tile strip',
-      text: 'A group gift usually reflects whoever bought it. ilmio makes it different — every friend adds a memory, and together, they make one gift.' },
-    { start: 8, end: 20, scene: 'Organizer onboarding → room maya-e085 with attendee link',
-      text: "I'm organizing a gift for Maya's housewarming — I name the friends, and ilmio gives me a room with a share link. That's all the organizer does." },
-    { start: 20, end: 36, scene: 'Generate v1: dense İznik pillow appears, Arcade quote',
-      text: 'Alex and Deniz already added theirs — garden lemons, blue tiled courtyards. The design brief is literally composed from their memories. And now, one click — Arcade turns that brief into a real product. An İznik pillow cover, 18 by 18 canvas, forty-three fifty-six — generated, priced, ready to order.' },
-    { start: 36, end: 45, scene: 'Alex and Deniz approve → 2/3',
-      text: 'Alex approves. Deniz approves. Two of three — and each approval is bound to this exact version of the gift.' },
-    { start: 45, end: 60, scene: 'Sam joins: brainstorm ideas appear, submits memory',
-      text: "Now Sam joins late. He doesn't know what to write — so ilmio brainstorms with AI, real inside-joke ideas, and he can steer it, again and again. He adds his own instead: 'calm home, minimal pattern, no lettering.'" },
-    { start: 60, end: 70, scene: 'v1 superseded: approvals reset to 0/3',
-      text: 'Watch what happens. New memory, new brief — v1 is superseded, and the earlier approvals stop applying. The gift changed, so the consent resets.' },
-    { start: 70, end: 80, scene: 'v2 generates: calmer medallion pillow',
-      text: "v2 generates — same memories, one more voice. Look how much quieter it is: one medallion, thin border, all that air. That's Sam's memory in the design." },
-    { start: 80, end: 90, scene: 'All three approve → unanimous',
-      text: 'Now everyone approves this specific result — three of three.' },
-    { start: 90, end: 95, scene: 'Story card + AI narrative',
-      text: "And Maya doesn't just get a pillow — she gets the story. Every memory, visible in the design, composed by AI into the card that ships with it. Everyone adds a memory. Together, you make one gift. That's ilmio." },
-  ];
-  const TOTAL = CUES[CUES.length - 1].end;
+  // Cues come from demo-voiceover-transcript.md: blocks headed `**m:ss – m:ss** · *scene*`
+  // followed by the quoted narration. The default is embedded; "Load script…" swaps it.
+  function parseScript(md) {
+    const head = /^\*\*(\d+):(\d{2})\s*[–—-]\s*(\d+):(\d{2})\*\*\s*·?\s*(?:\*(.*)\*)?\s*$/;
+    const cues = [];
+    let cur = null;
+    for (const raw of md.split(/\r?\n/)) {
+      const line = raw.trim();
+      const m = line.match(head);
+      if (m) {
+        cur = { start: +m[1] * 60 + +m[2], end: +m[3] * 60 + +m[4], scene: (m[5] || '').trim(), text: '' };
+        cues.push(cur);
+      } else if (cur && line && !/^(---|#)/.test(line)) {
+        cur.text += (cur.text ? ' ' : '') + line;
+      } else if (cur && (!line || /^(---|#)/.test(line)) && cur.text) {
+        cur = null;
+      }
+    }
+    for (const c of cues) c.text = c.text.replace(/^["“]|["”]$/g, '').trim();
+    return cues.filter((c) => c.text && c.end > c.start).sort((a, b) => a.start - b.start);
+  }
+  let CUES = parseScript(document.getElementById('default-script').textContent);
+  let TOTAL = CUES[CUES.length - 1].end;
   const TAIL = 0.4; // seconds of breathing room at the end of each cue
 
   const $ = (id) => document.getElementById(id);
@@ -153,6 +213,10 @@
 
   // Build the prompter. Each word gets a start time spread across the cue by character weight.
   const track = $('track'), timeline = $('timeline');
+  function build() {
+  track.innerHTML = '';
+  timeline.querySelectorAll('.seg').forEach((n) => n.remove());
+  TOTAL = CUES[CUES.length - 1].end;
   CUES.forEach((c, i) => {
     const words = c.text.split(/\s+/);
     const weights = words.map((w) => w.replace(/[^\p{L}\p{N}]/gu, '').length + 2);
@@ -186,6 +250,8 @@
     c.seg = seg;
   });
   $('total').textContent = fmt(TOTAL);
+  lastActive = -2;
+  }
 
   // Clock: follows the loaded video if there is one, otherwise an internal timer.
   const video = $('video');
@@ -222,6 +288,7 @@
   }
 
   let lastActive = -1;
+  build();
   function frame() {
     let t = now();
     if (!hasVideo && playing && t >= limit()) { seek(limit()); setPlaying(false); t = limit(); }
@@ -251,7 +318,7 @@
     const nx = CUES.find((c) => c.start > t);
     const up = $('upnext');
     if (nx && nx.start - t <= 3) { up.style.display = ''; up.innerHTML = `next line in <b>${(nx.start - t).toFixed(1)}s</b>`; }
-    else if (t >= TOTAL) { up.style.display = ''; up.innerHTML = 'done — that\'s ilmio'; }
+    else if (t >= TOTAL) { up.style.display = ''; up.innerHTML = 'done'; }
     else up.style.display = 'none';
 
     $('now').textContent = fmt(t, true);
@@ -287,6 +354,16 @@
   };
   video.onpause = () => { if (playing && !counting) { playing = false; $('play').textContent = '▶ Resume'; } };
   video.onplay = () => { if (!playing) { playing = true; $('play').textContent = '❚❚ Pause'; } };
+  $('script-file').onchange = async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const md = await f.text();
+    const cues = parseScript(md);
+    if (!cues.length) { alert('No timed blocks found — expected headers like **0:00 – 0:08** · *scene*'); return; }
+    setPlaying(false);
+    CUES = cues;
+    build(); seek(0);
+    e.target.value = '';
+  };
   window.addEventListener('resize', () => { lastActive = -2; });
 
   requestAnimationFrame(frame);
