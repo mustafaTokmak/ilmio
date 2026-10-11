@@ -6,9 +6,9 @@
 
 ## Demo video
 
-[![ilmio demo video](demo/thumbnail.png)](https://github.com/mustafaTokmak/ilmio/blob/main/demo/ilmio-demo.mp4)
+[![ilmio demo](demo/ilmio-demo.gif)](https://mustafatokmak.github.io/ilmio/demo/)
 
-[Watch the 2-minute demo video](https://github.com/mustafaTokmak/ilmio/blob/main/demo/ilmio-demo.mp4)
+[Watch with sound (plays in browser)](https://mustafatokmak.github.io/ilmio/demo/)
 
 Built for the [Shopping 3.0 — AI Commerce Hackathon with Arcade](https://www.tech-week.com/calendar/sf/events/shopping-3-0-the-ai-commerce-hackathon-with-arcade-1aa3beea-03e6-4cae-83c1-f731dfa509d5).
 
