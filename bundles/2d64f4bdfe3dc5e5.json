@@ -2,29 +2,25 @@
   "kind": "recorded-result",
   "briefFingerprint": "2d64f4bdfe3dc5e5",
   "provenance": {
-    "kind": "illustration",
-    "label": "Sample illustration — not an Arcade response",
-    "method": "AI-generated illustration standing in for a recorded result",
-    "recordedAt": "2026-10-11T00:00:00.000Z"
+    "kind": "arcade-api",
+    "label": "Recorded via Arcade API",
+    "method": "patterns/create → products/create (category \"Decorative Pillows\")",
+    "recordedAt": "2026-10-11T18:51:18.082Z"
   },
   "product": {
-    "name": "Pillow cover — lemon, tulip, geometric border",
-    "category": "pillow cover",
+    "name": "Decorative Pillows — generated pattern",
+    "category": "Decorative Pillows",
     "configuration": {
-      "size": "18 x 18 in",
-      "fabric": "cotton-linen",
-      "print": "single-sided",
-      "closure": "hidden zipper",
-      "insertIncluded": false
+      "fabric": "canvas",
+      "size": "18x18",
+      "embellishment": "none",
+      "insert": "none"
     }
   },
-  "image": "bundles/assets/design-v1.png",
-  "callouts": [
-    { "friend": "alex", "intended": "one small lemon-and-leaf detail" },
-    { "friend": "deniz", "intended": "a simplified tulip and thin geometric border" }
-  ],
+  "image": "bundles/assets/arcade-2d64f4bdfe3dc5e5.png",
+  "callouts": [],
   "quote": {
-    "unitPrice": "34.00",
+    "unitPrice": "43.56",
     "currency": "USD",
     "quantity": 1,
     "shipping": "not provided",
@@ -32,11 +28,15 @@
     "duties": "not provided",
     "expiresAt": null,
     "configuration": {
-      "size": "18 x 18 in",
-      "fabric": "cotton-linen",
-      "print": "single-sided",
-      "closure": "hidden zipper",
-      "insertIncluded": false
+      "fabric": "canvas",
+      "size": "18x18",
+      "embellishment": "none",
+      "insert": "none"
     }
+  },
+  "arcade": {
+    "patternId": "cmv46i1d5002nlm10cvvr4aud",
+    "productId": "574cd606-19da-4272-9425-b0e899420166",
+    "categoryId": "0ef267de-f8c2-4a93-89a3-63be809f68e2"
   }
 }

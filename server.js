@@ -7,9 +7,10 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const engine = require('./src/state');
-const { createRecordedProvider } = require('./src/provider');
+const { createRecordedProvider, createCachedProvider } = require('./src/provider');
 const { suggest } = require('./src/suggest');
 const { attachNarrative } = require('./src/narrative');
+const { createArcadeProvider } = require('./src/arcade');
 
 const PORT = process.env.PORT || 3847;
 const ROOT = __dirname;
@@ -34,7 +35,14 @@ const SEED = {
 };
 
 let state = loadState();
-const provider = createRecordedProvider(BUNDLES, Number(process.env.GENERATION_LATENCY_MS || 2500));
+
+// Cache-first: recorded bundles always win; a miss calls real Arcade when a
+// key is present, else reports provider-empty. The key stays server-only —
+// never in bundles, logs, or client code.
+const fallback = process.env.ARCADE_API_KEY
+  ? createArcadeProvider(process.env.ARCADE_API_KEY, BUNDLES)
+  : createRecordedProvider(BUNDLES, 0);
+const provider = createCachedProvider(BUNDLES, fallback, Number(process.env.GENERATION_LATENCY_MS || 2500));
 
 function loadState() {
   try {
@@ -132,7 +140,7 @@ async function handleApi(req, res, url) {
     if (current.status === 'ready') {
       return sendJson(res, 200, { job: null, version: current });
     }
-    const { jobId, done } = provider.request(current.brief.fingerprint);
+    const { jobId, done } = provider.request(current.brief.fingerprint, current.brief.text);
     engine.requestGeneration(state, jobId);
     saveState();
     // Resolve asynchronously; superseded/mismatched results are rejected by the engine.
@@ -188,6 +196,22 @@ async function handleApi(req, res, url) {
     attachNarrative(version, state.gift);
     saveState();
     return sendJson(res, 200, { narrative: version.narrative });
+  }
+
+  if (req.method === 'POST' && p === '/api/gift') {
+    // Organizer onboarding: create a fresh gift. `prefill` stages the demo's
+    // two seeded contributions so the storyboard stays fast.
+    const gift = {
+      recipient: String(body.recipient || '').trim() || 'Maya',
+      occasion: String(body.occasion || '').trim() || 'housewarming',
+      category: String(body.category || '').trim() || 'pillow cover',
+    };
+    const contributions = body.prefill
+      ? SEED.contributions
+      : { alex: null, deniz: null, sam: null };
+    state = engine.createState({ gift, contributions });
+    saveState();
+    return sendJson(res, 200, { state, status: engine.giftStatus(state) });
   }
 
   if (req.method === 'POST' && p === '/api/reset') {

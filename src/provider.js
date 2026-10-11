@@ -27,7 +27,7 @@ function createRecordedProvider(bundlesDir, latencyMs) {
     kind: 'recorded',
     // Returns {jobId, done(bundle|null, error|null)} — done resolves after the
     // simulated latency so the UI can show a genuine pending state.
-    request(fingerprint) {
+    request(fingerprint, _briefText) {
       const jobId = `job_${crypto.randomBytes(6).toString('hex')}`;
       const done = new Promise((resolve) => {
         setTimeout(() => {
@@ -44,4 +44,26 @@ function createRecordedProvider(bundlesDir, latencyMs) {
   };
 }
 
-module.exports = { createRecordedProvider };
+// Cache-first provider: serve bundles/<fingerprint>.json when it exists
+// (recorded bundle or a previously generated Arcade result), fall back to
+// `fallback` on a miss. Keeps rehearsals offline and never re-generates.
+function createCachedProvider(bundlesDir, fallback, latencyMs) {
+  const latency = latencyMs == null ? 2500 : latencyMs;
+  const file = (fp) => path.join(bundlesDir, `${fp}.json`);
+
+  return {
+    kind: `cached-${fallback.kind}`,
+    request(fingerprint, briefText) {
+      if (fs.existsSync(file(fingerprint))) {
+        const jobId = `job_${crypto.randomBytes(6).toString('hex')}`;
+        const done = new Promise((resolve) => {
+          setTimeout(() => resolve({ bundle: JSON.parse(fs.readFileSync(file(fingerprint), 'utf8')) }), latency);
+        });
+        return { jobId, done };
+      }
+      return fallback.request(fingerprint, briefText);
+    },
+  };
+}
+
+module.exports = { createRecordedProvider, createCachedProvider };

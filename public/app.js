@@ -1,12 +1,19 @@
 'use strict';
 
+// Screens: #/welcome → #/organize → #/room (host)
+//          #/welcome → #/join → #/room (attendee)
+// Role is kept in localStorage: 'host' | 'alex' | 'deniz' | 'sam'.
+
 const FRIENDS = ['alex', 'deniz', 'sam'];
 const FRIEND_NAMES = { alex: 'Alex', deniz: 'Deniz', sam: 'Sam' };
-// The staged third contribution, per the demo storyboard.
 const SAM_LINE = 'Calm home. Minimal pattern. No lettering.';
 
 let last = null;
 let polling = false;
+let joinFriend = null;
+let joinInfluence = null;
+
+/* ── api ─────────────────────────────────────────────── */
 
 async function api(path, body) {
   const res = await fetch(path, {
@@ -19,11 +26,45 @@ async function api(path, body) {
   return data;
 }
 
+/* ── routing ─────────────────────────────────────────── */
+
+function role() {
+  return localStorage.getItem('ogmp-role') || 'host';
+}
+function setRole(r) {
+  localStorage.setItem('ogmp-role', r);
+}
+
+function go(name) {
+  location.hash = '#/' + name;
+}
+
+function showScreen(name) {
+  for (const s of document.querySelectorAll('.screen')) s.classList.add('hidden');
+  const scr = document.getElementById('screen-' + name);
+  if (scr) scr.classList.remove('hidden');
+  if (name === 'room') refresh();
+}
+
+function route() {
+  const h = (location.hash || '#/welcome').replace('#/', '');
+  if (h === 'organize' || h === 'join' || h === 'room') showScreen(h);
+  else showScreen('welcome');
+}
+
+window.addEventListener('hashchange', route);
+document.querySelectorAll('[data-go]').forEach((b) => {
+  b.onclick = () => go(b.dataset.go);
+});
+
+/* ── state fetch + poll ──────────────────────────────── */
+
 async function refresh() {
   const res = await fetch('/api/state');
   const data = await res.json();
   last = data;
   render(data.state, data.status);
+  document.getElementById('resume-room').classList.remove('hidden');
 
   const anyRunning = Object.values(data.state.jobs || {}).some((j) => j.status === 'running');
   if (anyRunning && !polling) {
@@ -43,6 +84,8 @@ async function refresh() {
   }
 }
 
+/* ── helpers ─────────────────────────────────────────── */
+
 function el(tag, cls, text) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -59,9 +102,10 @@ function approvedCount(version) {
 }
 
 function render(state, status) {
-  document.getElementById('gift-line').textContent =
+  document.getElementById('room-gift').textContent =
     `A ${state.gift.occasion} ${state.gift.category} for ${state.gift.recipient}`;
-
+  document.getElementById('story-recipient').textContent = state.gift.recipient;
+  renderRoleSwitch();
   renderFriends(state);
   renderBrief(state);
   renderStage(state);
@@ -70,77 +114,86 @@ function render(state, status) {
   renderActivity(state);
 }
 
+function renderRoleSwitch() {
+  const wrap = document.getElementById('role-switch');
+  wrap.innerHTML = '';
+  for (const r of ['host', ...FRIENDS]) {
+    const b = el('button', r === role() ? 'active' : '', r === 'host' ? 'Host' : FRIEND_NAMES[r]);
+    b.onclick = () => { setRole(r); refresh(); };
+    wrap.appendChild(b);
+  }
+}
+
+/* ── friends rail ────────────────────────────────────── */
+
 function renderFriends(state) {
   const wrap = document.getElementById('friends');
   wrap.innerHTML = '';
   for (const f of FRIENDS) {
-    const card = el('div', 'friend');
-    card.appendChild(el('h3', null, FRIEND_NAMES[f]));
+    const box = el('div', 'friend');
+    const name = el('div', 'name', FRIEND_NAMES[f]);
+    if (role() === f) name.appendChild(el('span', 'tag', 'you'));
+    box.appendChild(name);
     const c = state.contributions[f];
     if (c) {
-      card.appendChild(el('p', 'memory', `“${c.text}”`));
-      if (c.intendedInfluence) {
-        card.appendChild(el('p', 'influence', `intended: ${c.intendedInfluence}`));
-      }
+      box.appendChild(el('p', 'memory', `“${c.text}”`));
+      if (c.intendedInfluence) box.appendChild(el('p', 'influence', `intended: ${c.intendedInfluence}`));
+    } else if (role() === 'host' || role() === f) {
+      box.appendChild(contributionEditor(f));
     } else {
-      const ta = el('textarea');
-      ta.id = `contrib-${f}`;
-      ta.value = SAM_LINE;
-      card.appendChild(ta);
-
-      // Brainstorm: many people stall on a blank box — offer memory+motif ideas.
-      let pickedInfluence = null;
-      const ideasBox = el('div', 'ideas hidden');
-      const brainstormBtn = el('button', 'secondary', 'Need ideas?');
-      brainstormBtn.onclick = async () => {
-        if (!ideasBox.classList.contains('hidden')) {
-          ideasBox.classList.add('hidden');
-          return;
-        }
-        const res = await fetch(`/api/suggest?friend=${f}`);
-        const { ideas } = await res.json();
-        ideasBox.innerHTML = '';
-        for (const idea of ideas) {
-          const chip = el('div', 'idea-chip');
-          chip.appendChild(el('span', 'idea-memory', `“${idea.memory}”`));
-          chip.appendChild(el('span', 'idea-influence', `→ ${idea.influence}`));
-          chip.onclick = () => {
-            ta.value = idea.memory;
-            pickedInfluence = idea.influence;
-            ideasBox.classList.add('hidden');
-          };
-          ideasBox.appendChild(chip);
-        }
-        ideasBox.appendChild(el('p', 'meta', 'demo suggestions — pick one or write your own'));
-        ideasBox.classList.remove('hidden');
-      };
-      card.appendChild(brainstormBtn);
-      card.appendChild(ideasBox);
-
-      const btn = el('button', null, `Add ${FRIEND_NAMES[f]}'s memory`);
-      btn.onclick = async () => {
-        btn.disabled = true;
-        try {
-          await api('/api/contributions', {
-            friend: f,
-            text: ta.value,
-            intendedInfluence: pickedInfluence,
-          });
-          await refresh();
-          // Auto-start generation for the new brief — the "one click" stage move.
-          await api('/api/generate');
-          await refresh();
-        } catch (e) {
-          alert(e.message);
-        } finally {
-          btn.disabled = false;
-        }
-      };
-      card.appendChild(btn);
+      box.appendChild(el('p', 'influence', 'hasn’t added a memory yet'));
     }
-    wrap.appendChild(card);
+    wrap.appendChild(box);
   }
 }
+
+function contributionEditor(f) {
+  const frag = document.createDocumentFragment();
+  const ta = el('textarea');
+  ta.id = `contrib-${f}`;
+  ta.value = f === 'sam' ? SAM_LINE : '';
+  frag.appendChild(ta);
+
+  let pickedInfluence = null;
+  const ideasBox = el('div', 'ideas hidden');
+  const brainstormBtn = el('button', 'secondary', 'Need ideas?');
+  brainstormBtn.onclick = async () => {
+    if (!ideasBox.classList.contains('hidden')) { ideasBox.classList.add('hidden'); return; }
+    const res = await fetch(`/api/suggest?friend=${f}`);
+    const { ideas } = await res.json();
+    ideasBox.innerHTML = '';
+    for (const idea of ideas) {
+      const chip = el('div', 'idea-chip');
+      chip.appendChild(el('span', 'idea-memory', `“${idea.memory}”`));
+      chip.appendChild(el('span', 'idea-influence', `→ ${idea.influence}`));
+      chip.onclick = () => { ta.value = idea.memory; pickedInfluence = idea.influence; ideasBox.classList.add('hidden'); };
+      ideasBox.appendChild(chip);
+    }
+    ideasBox.appendChild(el('p', 'meta', 'demo suggestions — pick one or write your own'));
+    ideasBox.classList.remove('hidden');
+  };
+  frag.appendChild(brainstormBtn);
+  frag.appendChild(ideasBox);
+
+  const btn = el('button', 'secondary', `Add ${FRIEND_NAMES[f]}'s memory`);
+  btn.onclick = async () => {
+    btn.disabled = true;
+    try {
+      await api('/api/contributions', { friend: f, text: ta.value, intendedInfluence: pickedInfluence });
+      await refresh();
+      await api('/api/generate');
+      await refresh();
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  };
+  frag.appendChild(btn);
+  return frag;
+}
+
+/* ── brief + stage ───────────────────────────────────── */
 
 function renderBrief(state) {
   const v = currentVersion(state);
@@ -151,28 +204,38 @@ function renderBrief(state) {
 function renderStage(state) {
   const wrap = document.getElementById('stage');
   wrap.innerHTML = '';
-
   const ordered = [...state.versions].sort((a, b) => b.n - a.n);
+
   for (const v of ordered) {
     const isCurrent = v.id === state.currentVersionId && v.status !== 'stale';
     const card = el('div', 'product' + (v.status === 'stale' ? ' stale' : ''));
+
+    if (v.bundle) {
+      const img = el('img');
+      img.src = '/' + v.bundle.image;
+      img.alt = v.bundle.product.name;
+      card.appendChild(img);
+    }
 
     const head = el('div', 'body');
     const badge = el('span', 'badge' + (isCurrent ? ' current' : ''),
       v.status === 'stale' ? `${v.id} · superseded` : `${v.id} · current`);
     head.appendChild(badge);
 
-    if (v.status === 'pending' && isCurrent) {
+    if ((v.status === 'pending' || v.status === 'provider-empty' || v.status === 'mismatch') && isCurrent) {
       const running = Object.values(state.jobs || {}).some(
         (j) => j.status === 'running' && j.versionId === v.id
       );
       const box = el('div', 'pending-box');
-      box.appendChild(el('p', null,
-        running
-          ? 'Generating a proposal for this brief…'
-          : 'The brief changed. A new proposal is needed before anyone can approve.'));
+      box.appendChild(el('p', null, v.status === 'provider-empty'
+        ? 'No recorded result exists for this exact brief — provider-pending state, no fake result shown.'
+        : v.status === 'mismatch'
+          ? 'The returned result did not match this brief and was rejected.'
+          : running
+            ? 'Generating a proposal for this brief…'
+            : 'The brief changed. A new proposal is needed before anyone can approve.'));
       if (!running) {
-        const btn = el('button', null, 'Generate proposal');
+        const btn = el('button', 'big', v.status === 'pending' ? 'Generate proposal' : 'Try again');
         btn.onclick = async () => {
           btn.disabled = true;
           try { await api('/api/generate'); await refresh(); }
@@ -180,59 +243,33 @@ function renderStage(state) {
         };
         box.appendChild(btn);
       }
-      card.appendChild(box);
       card.appendChild(head);
-      wrap.appendChild(card);
-      continue;
-    }
-
-    if ((v.status === 'provider-empty' || v.status === 'mismatch') && isCurrent) {
-      const box = el('div', 'pending-box');
-      box.appendChild(el('p', null,
-        v.status === 'provider-empty'
-          ? 'No recorded result exists for this exact brief. (Provider-pending state — no fake result is shown.)'
-          : 'The returned result did not match this brief and was rejected.'));
-      const btn = el('button', null, 'Try again');
-      btn.onclick = async () => { await api('/api/generate'); await refresh(); };
-      box.appendChild(btn);
       card.appendChild(box);
-      card.appendChild(head);
       wrap.appendChild(card);
       continue;
     }
 
     if (v.bundle) {
-      const img = el('img');
-      img.src = '/' + v.bundle.image;
-      img.alt = v.bundle.product.name;
-      card.appendChild(img);
       head.appendChild(el('h4', null, v.bundle.product.name));
-      const prov = el('span', 'badge provenance', v.bundle.provenance.label);
-      head.appendChild(prov);
-
+      head.appendChild(el('span', 'badge provenance', v.bundle.provenance.label));
       const cfg = el('p', 'config');
       for (const [k, val] of Object.entries(v.bundle.product.configuration)) {
         cfg.appendChild(el('span', null, `${k}: ${String(val)}`));
       }
       head.appendChild(cfg);
-
-      if (v.bundle.callouts) {
-        for (const c of v.bundle.callouts) {
-          head.appendChild(el('p', 'influence',
-            `${FRIEND_NAMES[c.friend]} → ${c.intended} (intended influence, unverified)`));
-        }
+      for (const c of v.bundle.callouts || []) {
+        head.appendChild(el('p', 'callout',
+          `${FRIEND_NAMES[c.friend]} → ${c.intended} (intended, unverified)`));
       }
-
       if (v.quote) {
         const q = el('div', 'quote');
         q.appendChild(el('div', 'price', `${v.quote.unitPrice} ${v.quote.currency}`));
-        const fields = el('div', 'fields',
+        q.appendChild(el('div', 'fields',
           `qty ${v.quote.quantity} · shipping ${v.quote.shipping} · tax ${v.quote.tax} · duties ${v.quote.duties}` +
-          ` · rev ${v.quote.revision}` + (v.quote.expiresAt ? ` · expires ${v.quote.expiresAt}` : ' · no expiry given'));
-        q.appendChild(fields);
+          ` · rev ${v.quote.revision}` + (v.quote.expiresAt ? ` · expires ${v.quote.expiresAt}` : ' · no expiry given')));
         head.appendChild(q);
       } else {
-        head.appendChild(el('p', 'meta', 'No quote on file — artwork can be reviewed, but no priced handoff claim.'));
+        head.appendChild(el('p', 'meta', 'No quote on file — artwork can be reviewed, no priced handoff claim.'));
       }
       card.appendChild(head);
     }
@@ -240,23 +277,32 @@ function renderStage(state) {
   }
 }
 
+/* ── approvals + host quote ──────────────────────────── */
+
 function renderApprovals(state) {
   const wrap = document.getElementById('approvals');
   const host = document.getElementById('host-box');
+  const hint = document.getElementById('approve-hint');
   wrap.innerHTML = '';
   host.innerHTML = '';
+  hint.textContent = '';
 
   const v = currentVersion(state);
   if (!v) return;
+  const me = role();
+  const isHost = me === 'host';
+  hint.textContent = isHost
+    ? 'Staged demo controls — each button acts as that friend, bound to the current version.'
+    : `You are ${FRIEND_NAMES[me]} — approve or request a change on the current proposal.`;
   const count = approvedCount(v);
 
   for (const f of FRIENDS) {
     const box = el('div', 'approval');
-    box.appendChild(el('div', 'who', FRIEND_NAMES[f]));
+    box.appendChild(el('div', 'who', FRIEND_NAMES[f] + (f === me ? ' (you)' : '')));
     const st = v.approvals[f];
     box.appendChild(el('div', 'state ' + st,
       st === 'approved' ? 'approved' : st === 'change_requested' ? 'change requested' : 'awaiting'));
-    if (v.status === 'ready') {
+    if (v.status === 'ready' && (isHost || f === me)) {
       const approveBtn = el('button', null, 'Approve');
       approveBtn.disabled = st === 'approved';
       approveBtn.onclick = async () => {
@@ -278,7 +324,7 @@ function renderApprovals(state) {
   const line = el('p', 'meta', `${count}/3 friends approved ${v.id}`);
   host.appendChild(line);
 
-  if (v.status === 'ready' && v.quote) {
+  if (isHost && v.status === 'ready' && v.quote) {
     const accepted = v.hostAcceptance && v.hostAcceptance.quoteRevision === v.quote.revision;
     const acc = el('button', null, accepted ? 'Quote accepted ✓' : 'Host: accept this quote');
     acc.disabled = accepted;
@@ -288,8 +334,6 @@ function renderApprovals(state) {
     };
     const refreshBtn = el('button', 'secondary', 'Refresh price (demo)');
     refreshBtn.onclick = async () => {
-      // Price-only refresh: same configuration, nudged price. Artwork approvals
-      // stay valid; host acceptance resets.
       const q = { ...v.quote };
       delete q.revision;
       delete q.refreshedAt;
@@ -301,6 +345,8 @@ function renderApprovals(state) {
     host.appendChild(refreshBtn);
   }
 }
+
+/* ── story card + narrative ──────────────────────────── */
 
 function renderStory(state, status) {
   const panel = document.getElementById('story-panel');
@@ -316,22 +362,6 @@ function renderStory(state, status) {
   card.appendChild(el('p', null,
     `For ${state.gift.recipient} — three friends, three memories, one ${state.gift.category}.`));
 
-  // Gift narrative — generated once all friends approve.
-  if (v.narrative) {
-    const n = el('div', 'narrative');
-    n.appendChild(el('p', 'narrative-text', `“${v.narrative.text}”`));
-    n.appendChild(el('p', 'meta', v.narrative.label));
-    card.appendChild(n);
-  } else {
-    const genBtn = el('button', null, 'Generate gift narrative');
-    genBtn.onclick = async () => {
-      genBtn.disabled = true;
-      try { await api('/api/narrative', { versionId: v.id }); await refresh(); }
-      catch (e) { alert(e.message); genBtn.disabled = false; }
-    };
-    card.appendChild(genBtn);
-  }
-
   for (const inf of v.brief.influences) {
     const callout = (v.bundle.callouts || []).find((c) => c.friend === inf.friend);
     const row = el('div', 'story-row');
@@ -340,6 +370,21 @@ function renderStory(state, status) {
     row.appendChild(el('span', null,
       `“${inf.contribution}” → ${callout ? callout.intended : 'visible in the design'} (intended influence)`));
     card.appendChild(row);
+  }
+
+  if (v.narrative) {
+    const n = el('div', 'narrative');
+    n.appendChild(el('p', 'narrative-text', `“${v.narrative.text}”`));
+    n.appendChild(el('p', 'meta', v.narrative.label));
+    card.appendChild(n);
+  } else {
+    const genBtn = el('button', 'secondary', 'Generate gift narrative');
+    genBtn.onclick = async () => {
+      genBtn.disabled = true;
+      try { await api('/api/narrative', { versionId: v.id }); await refresh(); }
+      catch (e) { alert(e.message); genBtn.disabled = false; }
+    };
+    card.appendChild(genBtn);
   }
 
   if (status.quoteAccepted) {
@@ -362,10 +407,133 @@ function renderActivity(state) {
   }
 }
 
+/* ── organizer onboarding ────────────────────────────── */
+
+document.getElementById('org-create').onclick = async () => {
+  const btn = document.getElementById('org-create');
+  btn.disabled = true;
+  try {
+    await api('/api/gift', {
+      recipient: document.getElementById('org-recipient').value,
+      occasion: document.getElementById('org-occasion').value,
+      category: document.getElementById('org-category').value,
+      prefill: document.getElementById('org-prefill').checked,
+    });
+    setRole('host');
+    go('room');
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+/* ── attendee onboarding ─────────────────────────────── */
+
+function renderJoinPick() {
+  const grid = document.getElementById('join-who');
+  grid.innerHTML = '';
+  const contribs = last ? last.state.contributions : {};
+  for (const f of FRIENDS) {
+    const b = el('button', 'who-card');
+    b.appendChild(el('span', null, FRIEND_NAMES[f]));
+    b.appendChild(el('small', null, contribs[f] ? 'memory added' : 'not yet added'));
+    b.onclick = () => openJoinWrite(f);
+    grid.appendChild(b);
+  }
+}
+
+function openJoinWrite(f) {
+  joinFriend = f;
+  joinInfluence = null;
+  document.getElementById('join-pick').classList.add('hidden');
+  document.getElementById('join-done').classList.add('hidden');
+  document.getElementById('join-write').classList.remove('hidden');
+  const gift = last.state.gift;
+  document.getElementById('join-title').textContent = `${FRIEND_NAMES[f]}, add your memory`;
+  document.getElementById('join-context').textContent =
+    `${gift.recipient} is celebrating a ${gift.occasion}. Your memory shapes the ${gift.category}'s design — the others already shared:`;
+  const others = document.getElementById('join-others');
+  others.innerHTML = '';
+  for (const of2 of FRIENDS) {
+    if (of2 === f) continue;
+    const c = last.state.contributions[of2];
+    if (c) {
+      const line = el('div', 'other-line');
+      line.appendChild(el('b', null, `${FRIEND_NAMES[of2]}: `));
+      line.appendChild(el('span', null, `“${c.text}”`));
+      others.appendChild(line);
+    }
+  }
+  document.getElementById('join-text').value = f === 'sam' ? SAM_LINE : '';
+}
+
+document.getElementById('join-back').onclick = () => {
+  document.getElementById('join-write').classList.add('hidden');
+  document.getElementById('join-pick').classList.remove('hidden');
+};
+
+document.getElementById('join-brainstorm').onclick = async () => {
+  const box = document.getElementById('join-ideas');
+  if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
+  const res = await fetch(`/api/suggest?friend=${joinFriend}`);
+  const { ideas } = await res.json();
+  box.innerHTML = '';
+  for (const idea of ideas) {
+    const chip = el('div', 'idea-chip');
+    chip.appendChild(el('span', 'idea-memory', `“${idea.memory}”`));
+    chip.appendChild(el('span', 'idea-influence', `→ ${idea.influence}`));
+    chip.onclick = () => {
+      document.getElementById('join-text').value = idea.memory;
+      joinInfluence = idea.influence;
+      box.classList.add('hidden');
+    };
+    box.appendChild(chip);
+  }
+  box.appendChild(el('p', 'meta', 'demo suggestions — pick one or write your own'));
+  box.classList.remove('hidden');
+};
+
+document.getElementById('join-submit').onclick = async () => {
+  const btn = document.getElementById('join-submit');
+  btn.disabled = true;
+  try {
+    await api('/api/contributions', {
+      friend: joinFriend,
+      text: document.getElementById('join-text').value,
+      intendedInfluence: joinInfluence,
+    });
+    await api('/api/generate');
+    await refresh();
+    setRole(joinFriend);
+    document.getElementById('join-write').classList.add('hidden');
+    const done = document.getElementById('join-done');
+    done.classList.remove('hidden');
+    document.getElementById('join-done-text').textContent =
+      'Your memory changed the design brief — a new proposal is being prepared for everyone to approve.';
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+document.getElementById('join-watch').onclick = () => go('room');
+
+/* ── reset + boot ────────────────────────────────────── */
+
 document.getElementById('reset').onclick = async () => {
   if (!confirm('Reset the demo to the seeded state?')) return;
   await api('/api/reset');
+  setRole('host');
+  go('welcome');
   await refresh();
 };
 
-refresh();
+document.getElementById('resume-room').onclick = () => go('room');
+
+(async () => {
+  route();
+  await refresh();
+  renderJoinPick();
+})();
