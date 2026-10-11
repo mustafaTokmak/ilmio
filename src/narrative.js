@@ -8,7 +8,7 @@
 // would implement the same {narrate(version, gift) -> string} signature and
 // record its engine name on the stored narrative.
 
-const { friendName } = require('./state');
+const { friendName } = typeof require !== 'undefined' ? require('./state') : window.OGMP_STATE;
 
 function narrate(version, gift) {
   const influences = version.brief.influences || [];
@@ -46,4 +46,6 @@ function attachNarrative(version, gift) {
   return version.narrative;
 }
 
-module.exports = { narrate, attachNarrative };
+const OGMP_NARRATIVE = { narrate, attachNarrative };
+if (typeof module !== 'undefined') module.exports = OGMP_NARRATIVE;
+if (typeof window !== 'undefined') window.OGMP_NARRATIVE = OGMP_NARRATIVE;

@@ -16,6 +16,7 @@ let joinInfluence = null;
 /* ── api ─────────────────────────────────────────────── */
 
 async function api(path, body) {
+  if (window.ogmpLocal) return window.ogmpLocal.api(path, body);
   const res = await fetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -65,8 +66,9 @@ document.querySelectorAll('[data-go]').forEach((b) => {
 /* ── state fetch + poll ──────────────────────────────── */
 
 async function refresh() {
-  const res = await fetch('/api/state');
-  const data = await res.json();
+  const data = window.ogmpLocal
+    ? window.ogmpLocal.state()
+    : await (await fetch('/api/state')).json();
   last = data;
   render(data.state, data.status);
   document.getElementById('resume-room').classList.remove('hidden');
@@ -75,8 +77,9 @@ async function refresh() {
   if (anyRunning && !polling) {
     polling = true;
     const tick = async () => {
-      const r = await fetch('/api/state');
-      const d = await r.json();
+      const d = window.ogmpLocal
+        ? window.ogmpLocal.state()
+        : await (await fetch('/api/state')).json();
       last = d;
       render(d.state, d.status);
       if (Object.values(d.state.jobs || {}).some((j) => j.status === 'running')) {
@@ -165,8 +168,9 @@ function contributionEditor(f) {
   const brainstormBtn = el('button', 'secondary', 'Need ideas?');
   brainstormBtn.onclick = async () => {
     if (!ideasBox.classList.contains('hidden')) { ideasBox.classList.add('hidden'); return; }
-    const res = await fetch(`/api/suggest?friend=${f}`);
-    const { ideas } = await res.json();
+    const { ideas } = window.ogmpLocal
+      ? window.ogmpLocal.suggest(f)
+      : await (await fetch(`/api/suggest?friend=${f}`)).json();
     ideasBox.innerHTML = '';
     for (const idea of ideas) {
       const chip = el('div', 'idea-chip');
@@ -496,8 +500,9 @@ document.getElementById('join-back').onclick = () => {
 document.getElementById('join-brainstorm').onclick = async () => {
   const box = document.getElementById('join-ideas');
   if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
-  const res = await fetch(`/api/suggest?friend=${joinFriend}`);
-  const { ideas } = await res.json();
+  const { ideas } = window.ogmpLocal
+    ? window.ogmpLocal.suggest(joinFriend)
+    : await (await fetch(`/api/suggest?friend=${joinFriend}`)).json();
   box.innerHTML = '';
   for (const idea of ideas) {
     const chip = el('div', 'idea-chip');

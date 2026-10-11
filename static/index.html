@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ilmio — one gift, many people</title>
+  <link rel="icon" type="image/png" href="ilmio.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ══ Welcome ══ -->
+  <section id="screen-welcome" class="screen welcome">
+    <div class="frame">
+      <img class="tile-strip" src="iznik-strip.jpg" alt="" aria-hidden="true" />
+      <img class="mascot" src="ilmio.png" alt="ilmio — a little yarn friend" />
+      <h1>ilmio</h1>
+      <p class="pitch">Everyone adds a memory. Together, you make one gift.</p>
+      <div class="welcome-actions">
+        <button class="big" data-go="organize">I'm organizing a gift</button>
+        <button class="big ghost" data-go="join">I was invited to contribute</button>
+        <button id="resume-room" class="link hidden">Open the gift room →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ Organizer onboarding ══ -->
+  <section id="screen-organize" class="screen onboarding hidden">
+    <div class="frame narrow">
+      <img class="mascot small" src="ilmio.png" alt="" />
+      <p class="step-label">Organizer · step 1 of 2</p>
+      <h2>Set up the gift</h2>
+      <p class="hint">Who is this for, and what's the occasion?</p>
+      <label>Recipient's name
+        <input id="org-recipient" type="text" value="Maya" maxlength="40" />
+      </label>
+      <label>Occasion
+        <select id="org-occasion">
+          <option value="housewarming" selected>Housewarming</option>
+          <option value="birthday">Birthday</option>
+          <option value="wedding">Wedding</option>
+          <option value="farewell">Farewell</option>
+        </select>
+      </label>
+      <label>Gift category
+        <input id="org-category" type="text" value="pillow cover" maxlength="40" />
+      </label>
+      <label class="check">
+        <input id="org-prefill" type="checkbox" checked />
+        Stage the demo (prefill Alex &amp; Deniz's memories)
+      </label>
+      <button class="big" id="org-next">Next: add friends →</button>
+      <button class="link" data-go="welcome">← back</button>
+    </div>
+    <div class="frame narrow hidden" id="org-friends">
+      <img class="mascot small" src="ilmio.png" alt="" />
+      <p class="step-label">Organizer · step 2 of 2</p>
+      <h2>Who's contributing?</h2>
+      <p class="hint">Each friend adds their own memory — they'll approve the gift it becomes.</p>
+      <label>Friend 1
+        <input id="org-friend-alex" type="text" value="Alex" maxlength="30" />
+      </label>
+      <label>Friend 2
+        <input id="org-friend-deniz" type="text" value="Deniz" maxlength="30" />
+      </label>
+      <label>Friend 3
+        <input id="org-friend-sam" type="text" value="Sam" maxlength="30" />
+      </label>
+      <button class="big" id="org-create">Create the gift →</button>
+      <button class="link" id="org-back2">← back</button>
+    </div>
+  </section>
+
+  <!-- ══ Attendee onboarding ══ -->
+  <section id="screen-join" class="screen onboarding hidden">
+    <div class="frame narrow" id="join-pick">
+      <img class="mascot small" src="ilmio.png" alt="" />
+      <p class="step-label">Contributor · step 1 of 2</p>
+      <h2>Which friend are you?</h2>
+      <p class="hint">Demo roles — pick who's contributing.</p>
+      <div class="who-grid" id="join-who"></div>
+      <button class="link" data-go="welcome">← back</button>
+    </div>
+    <div class="frame narrow hidden" id="join-write">
+      <img class="mascot small" src="ilmio.png" alt="" />
+      <p class="step-label">Contributor · step 2 of 2</p>
+      <h2 id="join-title">Add your memory</h2>
+      <p class="hint" id="join-context"></p>
+      <div id="join-others" class="others"></div>
+      <label>Your memory — a place, a ritual, a detail
+        <textarea id="join-text" rows="3"></textarea>
+      </label>
+      <button class="secondary" id="join-brainstorm">Need ideas?</button>
+      <div id="join-ideas" class="ideas hidden"></div>
+      <button class="big" id="join-submit">Add my memory →</button>
+      <button class="link" id="join-back">← pick someone else</button>
+    </div>
+    <div class="frame narrow hidden" id="join-done">
+      <img class="mascot small" src="ilmio.png" alt="ilmio" />
+      <p class="step-label">Contributor · done</p>
+      <h2>Your memory is in</h2>
+      <p class="hint" id="join-done-text"></p>
+      <button class="big" id="join-watch">Watch the gift room →</button>
+    </div>
+  </section>
+
+  <!-- ══ Gift room ══ -->
+  <section id="screen-room" class="screen room hidden">
+    <header class="room-bar">
+      <div>
+        <h1 id="room-title"><img class="mascot tiny" src="ilmio.png" alt="" /> ilmio</h1>
+        <p id="room-gift" class="gift-line"></p>
+      </div>
+      <div class="role-box">
+        <span class="meta">view as</span>
+        <div id="role-switch" class="role-switch"></div>
+      </div>
+    </header>
+
+    <div class="room-grid">
+      <aside class="rail">
+        <section class="card">
+          <h3>The friends</h3>
+          <div id="friends"></div>
+        </section>
+        <section class="card">
+          <h3>Design brief</h3>
+          <p id="brief-text" class="brief-text"></p>
+          <p class="meta">fingerprint <code id="brief-fp"></code></p>
+        </section>
+        <section class="card">
+          <h3>Activity</h3>
+          <ul id="activity" class="activity"></ul>
+        </section>
+      </aside>
+
+      <div class="stage-col">
+        <section id="stage" class="stage"></section>
+
+        <section class="card">
+          <h3>Approvals</h3>
+          <p id="approve-hint" class="meta"></p>
+          <div id="approvals" class="approvals"></div>
+          <div id="host-box" class="host-box"></div>
+        </section>
+
+        <section id="story-panel" class="card story hidden">
+          <h3>For <span id="story-recipient"></span></h3>
+          <div id="story-card"></div>
+        </section>
+
+        <button id="reset" class="reset">Reset demo</button>
+      </div>
+    </div>
+  </section>
+
+  <script src="vendor/sha256.js?v=4"></script>
+  <script src="vendor/state.js?v=4"></script>
+  <script src="vendor/suggest.js?v=4"></script>
+  <script src="vendor/narrative.js?v=4"></script>
+  <script src="static-server.js?v=4"></script>
+  <script src="app.js?v=4"></script>
+</body>
+</html>

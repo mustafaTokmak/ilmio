@@ -4,7 +4,9 @@
 // No I/O, no timers — every mutation is a function on a plain-data store
 // so it can be serialized, reloaded, and tested with node:test.
 
-const crypto = require('node:crypto');
+const crypto = typeof require !== 'undefined'
+  ? require('node:crypto')
+  : { createHash: () => ({ update: (s) => ({ digest: () => sha256hex(s) }) }) };
 
 const FRIENDS = ['alex', 'deniz', 'sam'];
 
@@ -361,7 +363,8 @@ function deserialize(json) {
   return JSON.parse(json);
 }
 
-module.exports = {
+const OGMP_STATE = {
+
   FRIENDS,
   FRIEND_NAMES,
   friendName,
@@ -381,3 +384,6 @@ module.exports = {
   serialize,
   deserialize,
 };
+
+if (typeof module !== 'undefined') module.exports = OGMP_STATE;
+if (typeof window !== 'undefined') window.OGMP_STATE = OGMP_STATE;

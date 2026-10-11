@@ -78,4 +78,6 @@ function suggest(gift, friend, contributions, count) {
   return fresh.slice(0, count || 3);
 }
 
-module.exports = { suggest, POOLS };
+const OGMP_SUGGEST = { suggest, POOLS };
+if (typeof module !== 'undefined') module.exports = OGMP_SUGGEST;
+if (typeof window !== 'undefined') window.OGMP_SUGGEST = OGMP_SUGGEST;

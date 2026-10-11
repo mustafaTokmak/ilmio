@@ -10,6 +10,7 @@ const engine = require('./src/state');
 const { createRecordedProvider, createCachedProvider } = require('./src/provider');
 const { suggest } = require('./src/suggest');
 const { attachNarrative } = require('./src/narrative');
+const { createLlm } = require('./src/llm');
 const { createArcadeProvider } = require('./src/arcade');
 
 const PORT = process.env.PORT || 3847;
@@ -43,6 +44,12 @@ const fallback = process.env.ARCADE_API_KEY
   ? createArcadeProvider(process.env.ARCADE_API_KEY, BUNDLES)
   : createRecordedProvider(BUNDLES, 0);
 const provider = createCachedProvider(BUNDLES, fallback, Number(process.env.GENERATION_LATENCY_MS || 2500));
+
+// Optional OpenRouter "understand & compose" layer. Every call falls back to
+// the honest local composers when the key is absent or the model errors.
+const llm = process.env.OPENROUTER_API_KEY
+  ? createLlm(process.env.OPENROUTER_API_KEY, process.env.OPENROUTER_MODEL || undefined)
+  : null;
 
 function loadState() {
   try {
@@ -130,7 +137,21 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === 'POST' && p === '/api/contributions') {
-    const v = engine.submitContribution(state, body.friend, body.text, body.intendedInfluence);
+    // "Understand": when the friend only writes a memory (no explicit design
+    // influence), the LLM interprets it into one. Honest provenance is stored
+    // on the contribution; a model failure just leaves the field empty.
+    let influence = body.intendedInfluence;
+    let interpretedBy = null;
+    if ((!influence || !String(influence).trim()) && llm) {
+      influence = await llm.interpretMemory(
+        state.gift,
+        engine.friendName(state.gift, body.friend),
+        body.text
+      );
+      if (influence) interpretedBy = llm.engine;
+    }
+    const v = engine.submitContribution(state, body.friend, body.text, influence);
+    if (interpretedBy) state.contributions[body.friend].interpretedBy = interpretedBy;
     saveState();
     return sendJson(res, 200, { version: v, status: engine.giftStatus(state) });
   }
@@ -186,8 +207,15 @@ async function handleApi(req, res, url) {
     if (!engine.FRIENDS.includes(friend)) {
       return sendJson(res, 400, { error: `unknown friend: ${friend}` });
     }
-    const ideas = suggest(state.gift, friend, state.contributions, Number(url.searchParams.get('count')) || 3);
-    return sendJson(res, 200, { ideas });
+    const count = Number(url.searchParams.get('count')) || 3;
+    let ideas = null;
+    let ideasEngine = 'local-template';
+    if (llm) {
+      ideas = await llm.suggest(state.gift, engine.friendName(state.gift, friend), state.contributions, count);
+      if (ideas) ideasEngine = llm.engine;
+    }
+    if (!ideas) ideas = suggest(state.gift, friend, state.contributions, count);
+    return sendJson(res, 200, { ideas, engine: ideasEngine });
   }
 
   if (req.method === 'POST' && p === '/api/narrative') {
@@ -199,7 +227,20 @@ async function handleApi(req, res, url) {
     if (!engine.isUnanimous(version)) {
       return sendJson(res, 400, { error: 'all friends must approve before the gift narrative is written' });
     }
-    attachNarrative(version, state.gift);
+    // "Compose": prefer the LLM narrator; fall back to the local composer so
+    // the story card is never fake — whichever engine wrote it is labeled.
+    if (llm) {
+      const text = await llm.narrate(version, state.gift, engine.friendName);
+      if (text) {
+        version.narrative = {
+          text,
+          engine: llm.engine,
+          label: llm.label,
+          generatedAt: new Date().toISOString(),
+        };
+      }
+    }
+    if (!version.narrative) attachNarrative(version, state.gift);
     saveState();
     return sendJson(res, 200, { narrative: version.narrative });
   }
