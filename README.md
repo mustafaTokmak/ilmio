@@ -1,62 +1,56 @@
 # ilmio — One Gift, Many People
 
-**Pitch: Everyone adds a memory. Together, you make one gift.**
+**Everyone adds a memory. Together, you make one gift.**
 
-A polished demo and first build for the [Shopping 3.0 — AI Commerce Hackathon with Arcade](https://www.tech-week.com/calendar/sf/events/shopping-3-0-the-ai-commerce-hackathon-with-arcade-1aa3beea-03e6-4cae-83c1-f731dfa509d5).
+Built for the [Shopping 3.0 — AI Commerce Hackathon with Arcade](https://www.tech-week.com/calendar/sf/events/shopping-3-0-the-ai-commerce-hackathon-with-arcade-1aa3beea-03e6-4cae-83c1-f731dfa509d5).
 
 ## Concept
 
-A group gift usually reflects whoever buys it. Here, every friend adds a memory — and each new contribution changes the proposed gift. Earlier approvals stop applying, a revised product appears, and everyone approves that specific result. The recipient also gets a story card connecting the gift to the people behind it.
+A group gift usually reflects whoever buys it. With ilmio, every friend adds a personal memory (an inside joke, a trip, a shared ritual), and AI composes those memories into one design brief. Arcade then turns that brief into real, priced products that the group ranks and approves together. When the gift arrives, the recipient gets a story card linking each detail to the friend who inspired it.
 
-## Demo flow (90 seconds)
+## How it works
 
-1. Open a housewarming gift with two of three memory cards filled.
-2. Reveal the first generated product + configuration + quote. 2/3 approve.
-3. Add the third contribution live — the brief changes, approvals reset to 0/3.
-4. Reveal the revised product beside the first. All three approve version 2.
-5. Close on the recipient story card: friend → memory → visible detail.
+1. **Organize**: the organizer names the recipient, occasion, and product, then names each contributor. This creates a room with a unique code (`#/room/<code>`) and an invite link (`#/join/<code>`).
+2. **Contribute**: each friend opens the invite link and writes their own memory. The host can't write memories for anyone. If a friend gets stuck, "Need ideas?" asks Claude Haiku (via OpenRouter) for three personalized ideas. They can steer it with a hint and ask for "3 more ideas" as often as they like.
+3. **Compose**: Haiku reads each memory and turns it into a design detail, and all the details merge into one collective brief.
+4. **Generate**: Haiku writes 20 design directions. Arcade generates 20 real pillow products from them, in waves of 5 with retry on rate limits. Each product comes with its pattern, configuration, and a live quote.
+5. **Rank**: each friend drag-drops the candidates into S/A/B/C/D/E/F tiers. Tiers are worth 6 to 0 points, and the scores add up across friends.
+6. **Decide**: the organizer clicks "Use most-liked" or picks a specific candidate, and that one becomes the proposal. Approvals are tied to that exact version, so a new contribution resets them.
+7. **Story**: once everyone approves, the recipient gets a story card and an AI-written gift narrative naming every friend.
 
-## Build
+Each step triggers the next one automatically, and the organizer can always trigger any step manually.
 
-The flow goes from welcome to organizing or joining a gift, then into a room with a candidate tier board, approvals, and a story card. The room also has a deterministic brief builder, version-bound approvals, an activity trail, and a reset control. It uses standard HTML/CSS/JavaScript with a small local Node server; recorded result bundles keep reload and offline rehearsal working.
+## What we use from Arcade
+
+Arcade is the commerce layer. It takes the AI-composed brief and produces the pattern, a real pillow product with fabric and size configuration, and a priced quote that can be ordered. Generated results are cached in `bundles/` with provenance labels.
 
 ## Run
 
 Requires Node 18+. No dependencies.
 
 ```bash
-npm start                  # serves the demo on http://localhost:3847
-npm test                   # runs the test suite
-npm run build:static       # regenerate the client-only static build
+export ARCADE_API_KEY=...       # server-side only
+export OPENROUTER_API_KEY=...   # server-side only (model: anthropic/claude-haiku-5.5)
+node server.js                  # http://localhost:3847/#/welcome
+node --test                     # state, ranking, quote, and static-build checks
+npm run build:static            # regenerate static/ after editing public/ or src/
 ```
 
-| Environment variable | Default | Purpose |
-| --- | --- | --- |
-| `PORT` | `3847` | Port for the local Node server. |
-| `GENERATION_LATENCY_MS` | `2500` | Simulated wait before a recorded bundle is returned. |
-| `ARCADE_API_KEY` | unset | Enables live Arcade generation for briefs without a recorded bundle; without it, only recorded bundles are available. |
-| `OPENROUTER_API_KEY` | unset | Enables LLM memory interpretation, narrative writing, and brainstorm suggestions; local composers are used as fallbacks. |
-| `OPENROUTER_MODEL` | `anthropic/claude-haiku-5.5` | OpenRouter model used when `OPENROUTER_API_KEY` is set. |
+Optional: `PORT` (default 3847), `GENERATION_LATENCY_MS` (simulated recorded-bundle wait, default 2500), `OPENROUTER_MODEL` (default `anthropic/claude-haiku-5.5`).
+
+The keys are optional. Without them, the app uses the honest local composer and replays recorded bundles, and every result shows a label saying where it came from. Keys stay on the server. They never appear in client code, bundles, or the repo.
+
+`static/` is a client-only build of the full flow that replays recorded Arcade bundles. It has no live AI and no live generation. Deployed at https://static-gagmwyry.devinapps.com. Serve it from any static host; room state lives in the browser's `localStorage`. `npm run build:static` regenerates it from `public/` and `src/` (`static-server.js`, `vendor/sha256.js`, and `static/bundles/` are maintained by hand), and `test/static.test.js` fails if it drifts.
 
 ## Layout
 
-- `src/state.js` — pure state engine: brief builder, version lifecycle, approvals, quote rules
-- `src/provider.js` — cache-first recorded bundles with an optional Arcade API fallback
-- `src/arcade.js` — live Arcade API provider (pattern → product → quote), saves results as recorded bundles
-- `src/llm.js` — optional OpenRouter memory interpretation and composition
-- `src/suggest.js` — local brainstorm suggestions
-- `src/narrative.js` — local gift-story composer
-- `server.js` — dependency-free Node server + JSON API + state persistence
-- `public/` — the single-page demo
-- `bundles/` — recorded results keyed by brief fingerprint, with provenance labels
-- `scripts/regen-bundles.js` — regenerate recorded bundles (requires `ARCADE_API_KEY`)
-- `scripts/build-static.js` — generate the static hosting build
-- `static/` — client-only build for static hosting, generated from `public/` and `src/state.js`, `src/suggest.js`, and `src/narrative.js`; `static-server.js`, `vendor/sha256.js`, and `bundles/` are maintained separately. The candidate tier board requires the Node server.
-- `test/` — `node:test` checks for state rules and static-build consistency
-- `demo-voiceover-transcript.md` — demo voiceover transcript
-
-Bundles in `bundles/` are recorded Arcade API results (see each bundle's `provenance`), replayed offline so rehearsal never depends on the network.
-
-## Static deploy
-
-Serve the contents of `static/` from any static host. Room state is stored in the browser's `localStorage`, separately for each room code.
+- `src/state.js`: state engine (brief builder, versions, approvals, quote rules)
+- `src/llm.js`: OpenRouter / Haiku (memory interpretation, brainstorm, narrative, 20 design directions)
+- `src/arcade.js`, `src/provider.js`: Arcade API adapter and recorded-bundle provider
+- `src/suggest.js`, `src/narrative.js`: local fallbacks
+- `server.js`: dependency-free Node server, JSON API, per-room persistence (`data/state-<code>.json`)
+- `public/`: the single-page app; `static/`: the static build
+- `bundles/`: Arcade results keyed by brief fingerprint
+- `scripts/regen-bundles.js`: re-record bundles (needs `ARCADE_API_KEY`); `scripts/build-static.js`: static build
+- `demo-voiceover-transcript.md`: 90-second demo voiceover
+- `test/`: `node:test` checks

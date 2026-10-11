@@ -220,7 +220,8 @@ function ideaPanel(friend, onPick) {
   const meta = el('p', 'meta');
 
   box.load = async (fOverride) => {
-    const f = fOverride || friend;
+    if (fOverride) friend = fOverride;
+    const f = friend;
     more.disabled = true;
     try {
       const avoid = [...shown];
