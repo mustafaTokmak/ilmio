@@ -420,3 +420,11 @@ body.noscroll { height: 100vh; overflow: hidden; }
 
 .onboarding .frame.narrow { margin-top: 0; }
 .onboarding { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+
+/* Welcome hero polish */
+.welcome .frame { padding: 0; overflow: hidden; max-width: 640px; }
+.welcome .tile-strip { width: 100%; height: 110px; object-fit: cover; display: block; }
+.welcome .mascot { width: 190px; margin: -30px auto 0; position: relative; }
+.welcome h1 { font-size: 5rem; }
+.welcome .pitch { font-size: 1.3rem; margin-bottom: 2.2rem; padding: 0 2rem; }
+.welcome-actions { padding-bottom: 3rem; }
