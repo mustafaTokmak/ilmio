@@ -128,7 +128,45 @@ function createLlm(apiKey, model = DEFAULT_MODEL) {
     }
   }
 
-  return { interpretMemory, narrate, suggest, engine, label, model };
+  // Design exploration: N distinct design directions for the same composed
+  // brief — used to fan out candidate generations (one Arcade run per
+  // direction). Each direction is a short style/palette/composition phrase
+  // appended to the brief, so candidates share the friends' influences but
+  // differ in execution.
+  async function designVariants(gift, contributions, count = 20) {
+    const memories = Object.entries(contributions || {})
+      .filter(([, c]) => c && c.text)
+      .map(([f, c]) => `${f}: "${c.text}"`)
+      .join('; ');
+    const text = await chat(apiKey, model, [
+      {
+        role: 'system',
+        content:
+          'You propose distinct design directions for a generated textile gift. ' +
+          'Reply with ONLY a JSON array of short strings (each 4-12 words): a ' +
+          'concrete direction varying motif density, palette, composition or mood. ' +
+          'Every direction must keep the same shared influences. No numbering.',
+      },
+      {
+        role: 'user',
+        content:
+          `Gift: a ${gift.category} for ${gift.recipient}'s ${gift.occasion}.\n` +
+          `Shared influences: ${memories}\n` +
+          `Give ${count} clearly different design directions:`,
+      },
+    ], { temperature: 1.0, maxTokens: 700 });
+    if (!text) return null;
+    const m = text.match(/\[[\s\S]*\]/);
+    if (!m) return null;
+    try {
+      const dirs = JSON.parse(m[0]).filter((d) => typeof d === 'string' && d.trim());
+      return dirs.length ? dirs.slice(0, count) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  return { interpretMemory, narrate, suggest, designVariants, engine, label, model };
 }
 
 module.exports = { createLlm, DEFAULT_MODEL };

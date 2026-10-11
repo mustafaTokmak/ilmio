@@ -107,20 +107,22 @@ async function refresh() {
   render(data.state, data.status);
   document.getElementById('resume-room').classList.remove('hidden');
 
-  const anyRunning = Object.values(data.state.jobs || {}).some((j) => j.status === 'running');
-  if (anyRunning && !polling) {
+  const stillBusy = (s) =>
+    Object.values(s.jobs || {}).some((j) => j.status === 'running') ||
+    (s.candidates && s.candidates.status === 'generating');
+  if (stillBusy(data.state) && !polling) {
     polling = true;
     const tick = async () => {
       const d = await fetchState();
       last = d;
       render(d.state, d.status);
-      if (Object.values(d.state.jobs || {}).some((j) => j.status === 'running')) {
-        setTimeout(tick, 800);
+      if (stillBusy(d.state)) {
+        setTimeout(tick, 1500);
       } else {
         polling = false;
       }
     };
-    setTimeout(tick, 800);
+    setTimeout(tick, 1500);
   }
 }
 
@@ -154,6 +156,7 @@ function render(state, status) {
   renderBrief(state);
   renderStage(state);
   renderApprovals(state);
+  renderCandidates(state);
   renderStory(state, status);
   renderActivity(state);
 }
@@ -428,6 +431,151 @@ function renderApprovals(state) {
     };
     host.appendChild(acc);
     host.appendChild(refreshBtn);
+  }
+}
+
+/* ── candidates: tier board ──────────────────────────── */
+
+const TIERS = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
+let tierSelected = null; // candidate id highlighted for click-to-place
+
+function renderCandidates(state) {
+  const meta = document.getElementById('candidates-meta');
+  const wrap = document.getElementById('candidates');
+  const actions = document.getElementById('candidates-actions');
+  wrap.innerHTML = '';
+  actions.innerHTML = '';
+  meta.textContent = '';
+  const c = state.candidates;
+  const me = role();
+
+  // Idle: only the host/organizer triggers (manual override — the pipeline
+  // also auto-triggers after every contribution).
+  if (!c || !c.items || !c.items.length) {
+    if (c && c.status === 'error') meta.textContent = c.error;
+    else meta.textContent = window.ogmpLocal
+      ? 'Candidate generation needs the live server (AI + Arcade).'
+      : 'Compose 20 design directions and generate them all — then rank by tier.';
+    if (me === 'host' && !window.ogmpLocal) {
+      const b = el('button', 'big', 'Generate 20 candidates');
+      b.onclick = async () => { b.disabled = true; try { await api('/api/candidates/generate'); await refresh(); } catch (e) { alert(e.message); b.disabled = false; } };
+      actions.appendChild(b);
+    }
+    return;
+  }
+
+  const done = c.items.filter((i) => i.status === 'ready').length;
+  meta.textContent = c.status === 'generating'
+    ? `Generating… ${done}/${c.items.length} ready · composed by ${c.engine || 'AI'}`
+    : `Rank them — drag each candidate into a tier · composed by ${c.engine || 'AI'}`;
+
+  const myTiers = (c.tiers && c.tiers[me]) || {};
+  const scores = {};
+  const pts = { S: 6, A: 5, B: 4, C: 3, D: 2, E: 1, F: 0 };
+  for (const picks of Object.values(c.tiers || {})) {
+    for (const [id, t] of Object.entries(picks)) scores[id] = (scores[id] || 0) + (pts[t] || 0);
+  }
+  const ranked = new Set(Object.keys(myTiers));
+
+  const thumb = (item) => {
+    const t = el('div', 'cand-thumb' + (tierSelected === item.id ? ' sel' : '') + (item.status !== 'ready' ? ' pending' : ''));
+    t.draggable = item.status === 'ready';
+    if (item.status === 'ready') {
+      const img = el('img');
+      img.src = '/' + item.bundle.image;
+      img.alt = item.direction;
+      img.title = item.direction;
+      t.appendChild(img);
+    } else {
+      // Placeholder while Arcade works — direction visible so the board
+      // reads intentional, not empty.
+      t.classList.add(item.status === 'error' ? 'err' : 'weaving');
+      if (item.status !== 'error') {
+        const m = el('img', 'ph');
+        m.src = 'ilmio.png';
+        m.alt = '';
+        t.appendChild(m);
+      }
+      t.appendChild(el('span', 'ph-text', item.status === 'error' ? 'failed' : 'weaving…'));
+      t.title = item.status === 'error' ? (item.error || 'generation failed') : item.direction;
+    }
+    const sc = scores[item.id] || 0;
+    if (sc) t.appendChild(el('span', 'score', String(sc)));
+    t.ondragstart = (e) => { e.dataTransfer.setData('text/plain', item.id); tierSelected = item.id; };
+    t.onclick = () => { tierSelected = tierSelected === item.id ? null : item.id; renderCandidates(last.state); };
+    t.onmouseenter = () => { const tip = document.getElementById('cand-tip'); if (tip) tip.textContent = item.direction; };
+    return t;
+  };
+
+  const zone = (tier, label) => {
+    const z = el('div', 'tier-row tier-' + tier.toLowerCase());
+    z.appendChild(el('span', 'tier-label', label || tier));
+    const body = el('div', 'tier-body');
+    for (const item of c.items.filter((i) => myTiers[i.id] === tier)) body.appendChild(thumb(item));
+    z.appendChild(body);
+    z.ondragover = (e) => { e.preventDefault(); z.classList.add('over'); };
+    z.ondragleave = () => z.classList.remove('over');
+    z.ondrop = async (e) => {
+      e.preventDefault(); z.classList.remove('over');
+      const id = e.dataTransfer.getData('text/plain');
+      if (!id) return;
+      try { await api('/api/candidates/tier', { friend: me, candidateId: id, tier }); tierSelected = null; await refresh(); }
+      catch (err) { alert(err.message); }
+    };
+    z.onclick = async () => {
+      if (!tierSelected) return;
+      try { await api('/api/candidates/tier', { friend: me, candidateId: tierSelected, tier }); tierSelected = null; await refresh(); }
+      catch (err) { alert(err.message); }
+    };
+    return z;
+  };
+
+  // Unranked pool
+  const pool = el('div', 'tier-row pool');
+  pool.appendChild(el('span', 'tier-label', '?'));
+  const poolBody = el('div', 'tier-body');
+  for (const item of c.items.filter((i) => !ranked.has(i.id))) poolBody.appendChild(thumb(item));
+  pool.appendChild(poolBody);
+  pool.ondragover = (e) => { e.preventDefault(); pool.classList.add('over'); };
+  pool.ondragleave = () => pool.classList.remove('over');
+  pool.ondrop = async (e) => {
+    e.preventDefault(); pool.classList.remove('over');
+    const id = e.dataTransfer.getData('text/plain');
+    if (!id) return;
+    try { await api('/api/candidates/tier', { friend: me, candidateId: id, tier: 'F' }); await refresh(); }
+    catch (err) { alert(err.message); }
+  };
+  wrap.appendChild(pool);
+  wrap.appendChild(el('p', 'meta', '▲ drag into tiers below (or tap a tile, then tap a row)'));
+
+  for (const t of TIERS) wrap.appendChild(zone(t));
+  wrap.appendChild(el('p', 'meta', '')).id = 'cand-tip';
+
+  // Host actions: manual pick override + auto-pick the most liked.
+  if (me === 'host' && done) {
+    const pickTop = el('button', 'big', 'Use most-liked as proposal');
+    pickTop.onclick = async () => {
+      pickTop.disabled = true;
+      try { await api('/api/candidates/pick', {}); await refresh(); }
+      catch (e) { alert(e.message); pickTop.disabled = false; }
+    };
+    actions.appendChild(pickTop);
+    const sel = el('select');
+    sel.appendChild(el('option', null, '…or pick a specific candidate'));
+    for (const item of c.items.filter((i) => i.status === 'ready')) {
+      const o = el('option', null, `#${item.id.slice(1)} (${scores[item.id] || 0} pts) — ${item.direction.slice(0, 60)}`);
+      o.value = item.id;
+      sel.appendChild(o);
+    }
+    sel.onchange = async () => {
+      if (!sel.value) return;
+      try { await api('/api/candidates/pick', { candidateId: sel.value }); await refresh(); }
+      catch (e) { alert(e.message); }
+    };
+    actions.appendChild(sel);
+    const regen = el('button', 'link', 'Regenerate 20');
+    regen.onclick = async () => { try { await api('/api/candidates/generate'); await refresh(); } catch (e) { alert(e.message); } };
+    actions.appendChild(regen);
   }
 }
 

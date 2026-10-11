@@ -1,0 +1,42 @@
+{
+  "kind": "recorded-result",
+  "briefFingerprint": "2614ac705629ada8",
+  "provenance": {
+    "kind": "arcade-api",
+    "label": "Recorded via Arcade API",
+    "method": "patterns/create → products/create (category \"Decorative Pillows\")",
+    "recordedAt": "2026-10-11T21:08:10.231Z"
+  },
+  "product": {
+    "name": "Decorative Pillows — generated pattern",
+    "category": "Decorative Pillows",
+    "configuration": {
+      "fabric": "canvas",
+      "size": "18x18",
+      "embellishment": "none",
+      "insert": "none"
+    }
+  },
+  "image": "bundles/assets/arcade-2614ac705629ada8.png",
+  "callouts": [],
+  "quote": {
+    "unitPrice": "43.56",
+    "currency": "USD",
+    "quantity": 1,
+    "shipping": "not provided",
+    "tax": "not provided",
+    "duties": "not provided",
+    "expiresAt": null,
+    "configuration": {
+      "fabric": "canvas",
+      "size": "18x18",
+      "embellishment": "none",
+      "insert": "none"
+    }
+  },
+  "arcade": {
+    "patternId": "cmv4bdi1s01rvpb10f7rn74xg",
+    "productId": "c21e4600-6378-40bd-859a-c18e3127d003",
+    "categoryId": "0ef267de-f8c2-4a93-89a3-63be809f68e2"
+  }
+}

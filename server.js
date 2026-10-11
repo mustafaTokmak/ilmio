@@ -119,6 +119,87 @@ function clientError(res, e) {
   sendJson(res, 400, { error: e.message });
 }
 
+// ── Candidates: 20 AI design directions → 20 parallel Arcade generations ──────
+// Each direction gets its own brief fingerprint and its own recorded bundle;
+// the cache provider makes re-runs free. `candidateRuns` tokens guard against
+// a stale run flushing results into a room that was reset or reseeded.
+const candidateRuns = new Map(); // code → token
+
+function candidateFingerprint(baseBrief, direction) {
+  return crypto.createHash('sha256').update(`${baseBrief}\nDirection: ${direction}`, 'utf8').digest('hex').slice(0, 16);
+}
+
+async function generateCandidates(code) {
+  const room = rooms.get(code);
+  if (!room || !llm) return;
+  const current = engine.currentVersion(room);
+  const baseBrief = current.brief.text;
+  const token = crypto.randomBytes(4).toString('hex');
+  candidateRuns.set(code, token);
+  room.candidates = {
+    status: 'generating',
+    briefFp: current.brief.fingerprint,
+    items: [],
+    tiers: {},
+    engine: llm.engine,
+    startedAt: new Date().toISOString(),
+  };
+  saveRoom(code);
+
+  const directions = await llm.designVariants(room.gift, room.contributions, 20);
+  if (candidateRuns.get(code) !== token) return;
+  if (!directions || !directions.length) {
+    room.candidates.status = 'error';
+    room.candidates.error = 'the AI could not compose design directions';
+    saveRoom(code);
+    return;
+  }
+
+  // All 20 run in parallel but launch in waves of 5 — Arcade 429s a burst
+  // ("Retry after 10 seconds"), and each result is retried once on a 429.
+  const fire = (direction, i, attempt = 1) => {
+    const fp = candidateFingerprint(baseBrief, direction);
+    const item = room.candidates.items[i];
+    const { done } = provider.request(fp, `${baseBrief}\nDesign direction: ${direction}`);
+    done.then(({ bundle, error }) => {
+      if (candidateRuns.get(code) !== token) return;
+      if (bundle) {
+        item.status = 'ready';
+        item.bundle = bundle;
+      } else if (error && /429|rate_limit/i.test(error) && attempt < 3) {
+        setTimeout(() => fire(direction, i, attempt + 1), 15000);
+        return;
+      } else {
+        item.status = 'error';
+        item.error = error;
+      }
+      if (!room.candidates.items.some((it) => it.status === 'generating')) {
+        room.candidates.status = 'ready';
+        room.candidates.readyAt = new Date().toISOString();
+      }
+      saveRoom(code);
+    }).catch(() => {});
+  };
+  directions.forEach((direction, i) => {
+    room.candidates.items.push({ id: `c${i + 1}`, direction, fingerprint: candidateFingerprint(baseBrief, direction), status: 'generating' });
+    setTimeout(() => {
+      if (candidateRuns.get(code) === token) fire(direction, i);
+    }, Math.floor(i / 5) * 12000);
+  });
+  saveRoom(code);
+}
+
+function candidateScores(candidates) {
+  const pts = { S: 6, A: 5, B: 4, C: 3, D: 2, E: 1, F: 0 };
+  const scores = {};
+  for (const [friend, picks] of Object.entries((candidates && candidates.tiers) || {})) {
+    for (const [id, tier] of Object.entries(picks)) {
+      scores[id] = (scores[id] || 0) + (pts[tier] || 0);
+    }
+  }
+  return scores;
+}
+
 const MIME = {
   '.html': 'text/html',
   '.css': 'text/css',
@@ -195,6 +276,58 @@ async function handleApi(req, res, url) {
     }
     const v = engine.submitContribution(state, body.friend, body.text, influence);
     if (interpretedBy) state.contributions[body.friend].interpretedBy = interpretedBy;
+    saveState();
+    // Auto-trigger: a new memory means a new brief — candidates regenerate in
+    // the background. The organizer can also trigger manually via
+    // /api/candidates/generate.
+    if (llm) generateCandidates(code).catch((e) => console.warn(`candidates: ${e.message}`));
+    return sendJson(res, 200, { version: v, status: engine.giftStatus(state) });
+  }
+
+  if (req.method === 'POST' && p === '/api/candidates/generate') {
+    // Manual trigger — always available to the organizer, even mid-flight.
+    if (!llm) {
+      return sendJson(res, 503, { error: 'candidate generation needs OPENROUTER_API_KEY on the server' });
+    }
+    generateCandidates(code).catch((e) => console.warn(`candidates: ${e.message}`));
+    return sendJson(res, 202, { status: 'generating' });
+  }
+
+  if (req.method === 'POST' && p === '/api/candidates/tier') {
+    // Each friend buckets candidates into S/A/B/C/D/F. Ranks are per-friend;
+    // the aggregate score decides the most-liked candidate.
+    const tiers = state.candidates && state.candidates.tiers;
+    if (!state.candidates || !tiers) return sendJson(res, 400, { error: 'no candidates yet' });
+    const item = state.candidates.items.find((it) => it.id === body.candidateId);
+    if (!item) return sendJson(res, 400, { error: `unknown candidate: ${body.candidateId}` });
+    if (!engine.FRIENDS.includes(body.friend)) return sendJson(res, 400, { error: `unknown friend: ${body.friend}` });
+    const tier = String(body.tier || '').toUpperCase();
+    if (!/^[SABCDEF]$/.test(tier)) return sendJson(res, 400, { error: 'tier must be S, A, B, C, D, E or F' });
+    tiers[body.friend] = tiers[body.friend] || {};
+    tiers[body.friend][item.id] = tier;
+    saveState();
+    return sendJson(res, 200, { scores: candidateScores(state.candidates) });
+  }
+
+  if (req.method === 'POST' && p === '/api/candidates/pick') {
+    // The most-liked candidate becomes the proposal. `candidateId` lets the
+    // host override the scoreboard; omitting it auto-picks the top scorer.
+    if (!state.candidates || !state.candidates.items.length) {
+      return sendJson(res, 400, { error: 'no candidates yet' });
+    }
+    let item = null;
+    if (body.candidateId) {
+      item = state.candidates.items.find((it) => it.id === body.candidateId);
+      if (!item) return sendJson(res, 400, { error: `unknown candidate: ${body.candidateId}` });
+    } else {
+      const scores = candidateScores(state.candidates);
+      const ready = state.candidates.items.filter((it) => it.status === 'ready');
+      item = ready.sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0))[0];
+    }
+    if (!item || item.status !== 'ready' || !item.bundle) {
+      return sendJson(res, 400, { error: 'candidate has no generated result yet' });
+    }
+    const v = engine.attachCandidate(state, item.bundle, item.direction);
     saveState();
     return sendJson(res, 200, { version: v, status: engine.giftStatus(state) });
   }

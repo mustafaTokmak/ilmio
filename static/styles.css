@@ -373,3 +373,35 @@ button.link:hover { color: var(--ink); }
   .frame.narrow { margin: 4vh 1rem; padding: 1.8rem 1.4rem; }
   .welcome h1 { font-size: 2.2rem; }
 }
+
+/* ── candidates tier board ───────────────────────────── */
+.candidates { display: flex; flex-direction: column; gap: 4px; }
+.tier-row { display: flex; min-height: 56px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+.tier-label { width: 52px; flex: 0 0 52px; display: flex; align-items: center; justify-content: center;
+  font-family: Fraunces, serif; font-weight: 700; font-size: 1.5rem; color: var(--ink); }
+.tier-s .tier-label { background: #ff8080; }
+.tier-a .tier-label { background: #ffc48a; }
+.tier-b .tier-label { background: #fbff8a; }
+.tier-c .tier-label { background: #8aff9e; }
+.tier-d .tier-label { background: #8ae8ff; }
+.tier-e .tier-label { background: #a08aff; }
+.tier-f .tier-label { background: #f28aff; }
+.tier-row.pool .tier-label { background: var(--paper-deep); color: var(--blue-soft); font-size: 1.1rem; }
+.tier-body { flex: 1; display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; background: var(--card); min-height: 54px; }
+.tier-row.over .tier-body { background: var(--lime); outline: 2px dashed var(--ink); outline-offset: -4px; }
+.cand-thumb { position: relative; width: 56px; height: 56px; border-radius: 4px; overflow: hidden;
+  border: 1px solid var(--line); cursor: grab; background: var(--paper-deep); flex: 0 0 56px; }
+.cand-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.cand-thumb.pending { cursor: default; display: flex; align-items: center; justify-content: center; opacity: 0.55; }
+.cand-thumb.sel { outline: 3px solid var(--ink); outline-offset: -1px; }
+.cand-thumb .score { position: absolute; right: 1px; bottom: 1px; background: var(--ink); color: var(--lime);
+  font-size: 0.6rem; padding: 0 3px; border-radius: 3px; }
+.cand-thumb .spin { font-size: 1.2rem; color: var(--blue-soft); }
+#candidates-actions { display: flex; gap: 0.8rem; align-items: center; margin-top: 0.8rem; flex-wrap: wrap; }
+#candidates-actions select { font: inherit; padding: 0.3rem; max-width: 340px; }
+.cand-thumb.weaving { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  background: repeating-linear-gradient(45deg, var(--paper-deep), var(--paper-deep) 6px, var(--card) 6px, var(--card) 12px); opacity: 0.9; }
+.cand-thumb.weaving img.ph { width: 26px; height: 26px; object-fit: cover; border-radius: 50%; }
+.cand-thumb .ph-text { font-size: 0.5rem; color: var(--blue-soft); }
+.cand-thumb.err { display: flex; align-items: center; justify-content: center; background: #fdecec; }
+.cand-thumb.err .ph-text { color: #a33; font-size: 0.55rem; }

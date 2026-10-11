@@ -15,19 +15,29 @@ const crypto = require('node:crypto');
 const BASE = 'https://platform.arcade.ai/v1';
 const UA = 'one-gift-many-people/0.1';
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function call(apiKey, endpoint, body) {
-  const res = await fetch(`${BASE}/${endpoint}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'User-Agent': UA,
-    },
-    body: JSON.stringify(body),
-  });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`arcade ${endpoint} HTTP ${res.status}: ${text.slice(0, 300)}`);
-  return JSON.parse(text);
+  // The account rate-limits bursts (HTTP 429, "Retry after 10 seconds").
+  // Every call self-heals: back off and retry rather than losing a job.
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(`${BASE}/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'User-Agent': UA,
+      },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    if (res.status === 429 && attempt <= 4) {
+      await sleep(12000);
+      continue;
+    }
+    if (!res.ok) throw new Error(`arcade ${endpoint} HTTP ${res.status}: ${text.slice(0, 300)}`);
+    return JSON.parse(text);
+  }
 }
 
 async function waitJob(apiKey, jobId, timeoutMs) {
@@ -65,6 +75,20 @@ function extFrom(url, contentType) {
 function createArcadeProvider(apiKey, bundlesDir, options) {
   const categoryName = (options && options.categoryName) || 'Decorative Pillows';
 
+  // Category + default selections are identical for every generation in a
+  // batch — fetch once per provider instance (saves 2 API calls per candidate).
+  let catCache = null;
+  async function categorySelections() {
+    if (catCache) return catCache;
+    const cats = await call(apiKey, 'categories/list', {});
+    const cat = pickCategory(cats.items || [], categoryName);
+    if (!cat) throw new Error(`no arcade category matching "${categoryName}"`);
+    const opts = await call(apiKey, 'categories/get', { categoryId: cat.categoryId, selections: {} });
+    if (!opts.canManufacture) throw new Error(`category "${cat.name}" cannot manufacture with default selections`);
+    catCache = { cat, selections: opts.selections };
+    return catCache;
+  }
+
   async function generate(fingerprint, briefText) {
     // 1. pattern
     const patternJob = await call(apiKey, 'patterns/create', {
@@ -75,13 +99,8 @@ function createArcadeProvider(apiKey, bundlesDir, options) {
     const patternId = patternResult.patternId;
     if (!patternId) throw new Error('pattern job returned no patternId');
 
-    // 2. category + default-complete selections
-    const cats = await call(apiKey, 'categories/list', {});
-    const cat = pickCategory(cats.items || [], categoryName);
-    if (!cat) throw new Error(`no arcade category matching "${categoryName}"`);
-    const opts = await call(apiKey, 'categories/get', { categoryId: cat.categoryId, selections: {} });
-    if (!opts.canManufacture) throw new Error(`category "${cat.name}" cannot manufacture with default selections`);
-    const selections = opts.selections;
+    // 2. category + default-complete selections (cached across candidates)
+    const { cat, selections } = await categorySelections();
 
     // 3. product
     const productJob = await call(apiKey, 'products/create', {
