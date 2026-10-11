@@ -8,7 +8,7 @@ A polished demo and first build for the [Shopping 3.0 — AI Commerce Hackathon 
 
 A group gift usually reflects whoever buys it. Here, every friend adds a memory — and each new contribution changes the proposed gift. Earlier approvals stop applying, a revised product appears, and everyone approves that specific result. The recipient also gets a story card connecting the gift to the people behind it.
 
-## Demo flow (120 seconds)
+## Demo flow (90 seconds)
 
 1. Open a housewarming gift with two of three memory cards filled.
 2. Reveal the first generated product + configuration + quote. 2/3 approve.
