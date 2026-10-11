@@ -104,9 +104,9 @@ code { background: var(--paper-deep); padding: 0.1rem 0.35rem; border-radius: 4p
   outline: 1px solid var(--line);
   outline-offset: 6px;
   background: var(--card);
-  margin-top: 12vh;
-  margin-bottom: 10vh;
-  padding: 4rem 3rem;
+  margin-top: 7vh;
+  margin-bottom: 6vh;
+  padding: 3rem 3rem;
 }
 .welcome h1 { line-height: 1.0; }
 .pitch { color: var(--blue); font-style: italic; font-size: 1.15rem; margin: 0 0 2.5rem; }
