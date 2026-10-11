@@ -128,6 +128,16 @@ async function refresh() {
 
 /* ── helpers ─────────────────────────────────────────── */
 
+let errTimer = null;
+function errMsg(msg) {
+  const t = document.getElementById('toast');
+  if (!t) { console.error(msg); return; }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(errTimer);
+  errTimer = setTimeout(() => t.classList.remove('show'), 4000);
+}
+
 function el(tag, cls, text) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -272,7 +282,7 @@ function contributionEditor(f) {
       await api('/api/generate');
       await refresh();
     } catch (e) {
-      alert(e.message);
+      errMsg(e.message);
     } finally {
       btn.disabled = false;
     }
@@ -327,7 +337,7 @@ function renderStage(state) {
         btn.onclick = async () => {
           btn.disabled = true;
           try { await api('/api/generate'); await refresh(); }
-          catch (e) { alert(e.message); btn.disabled = false; }
+          catch (e) { errMsg(e.message); btn.disabled = false; }
         };
         box.appendChild(btn);
       }
@@ -395,13 +405,13 @@ function renderApprovals(state) {
       approveBtn.disabled = st === 'approved';
       approveBtn.onclick = async () => {
         try { await api('/api/approve', { versionId: v.id, friend: f }); await refresh(); }
-        catch (e) { alert(e.message); }
+        catch (e) { errMsg(e.message); }
       };
       const changeBtn = el('button', 'secondary', 'Request change');
       changeBtn.onclick = async () => {
         const note = prompt('What should change?');
         try { await api('/api/request-change', { versionId: v.id, friend: f, note }); await refresh(); }
-        catch (e) { alert(e.message); }
+        catch (e) { errMsg(e.message); }
       };
       box.appendChild(approveBtn);
       box.appendChild(changeBtn);
@@ -418,7 +428,7 @@ function renderApprovals(state) {
     acc.disabled = accepted;
     acc.onclick = async () => {
       try { await api('/api/accept-quote', { versionId: v.id }); await refresh(); }
-      catch (e) { alert(e.message); }
+      catch (e) { errMsg(e.message); }
     };
     const refreshBtn = el('button', 'secondary', 'Refresh price (demo)');
     refreshBtn.onclick = async () => {
@@ -427,7 +437,7 @@ function renderApprovals(state) {
       delete q.refreshedAt;
       q.unitPrice = (parseFloat(q.unitPrice) + 1.5).toFixed(2);
       try { await api('/api/refresh-price', { versionId: v.id, quote: q }); await refresh(); }
-      catch (e) { alert(e.message); }
+      catch (e) { errMsg(e.message); }
     };
     host.appendChild(acc);
     host.appendChild(refreshBtn);
@@ -458,7 +468,7 @@ function renderCandidates(state) {
       : 'Compose 20 design directions and generate them all — then rank by tier.';
     if (me === 'host' && !window.ogmpLocal) {
       const b = el('button', 'big', 'Generate 20 candidates');
-      b.onclick = async () => { b.disabled = true; try { await api('/api/candidates/generate'); await refresh(); } catch (e) { alert(e.message); b.disabled = false; } };
+      b.onclick = async () => { b.disabled = true; try { await api('/api/candidates/generate'); await refresh(); } catch (e) { errMsg(e.message); b.disabled = false; } };
       actions.appendChild(b);
     }
     return;
@@ -519,13 +529,15 @@ function renderCandidates(state) {
       e.preventDefault(); z.classList.remove('over');
       const id = e.dataTransfer.getData('text/plain');
       if (!id) return;
+      if (me === 'host') { errMsg('Pick a friend (view as) to rank — tiers belong to them.'); return; }
       try { await api('/api/candidates/tier', { friend: me, candidateId: id, tier }); tierSelected = null; await refresh(); }
-      catch (err) { alert(err.message); }
+      catch (err) { errMsg(err.message); }
     };
     z.onclick = async () => {
       if (!tierSelected) return;
+      if (me === 'host') { errMsg('Pick a friend (view as) to rank — tiers belong to them.'); tierSelected = null; await refresh(); return; }
       try { await api('/api/candidates/tier', { friend: me, candidateId: tierSelected, tier }); tierSelected = null; await refresh(); }
-      catch (err) { alert(err.message); }
+      catch (err) { errMsg(err.message); }
     };
     return z;
   };
@@ -542,8 +554,9 @@ function renderCandidates(state) {
     e.preventDefault(); pool.classList.remove('over');
     const id = e.dataTransfer.getData('text/plain');
     if (!id) return;
+    if (me === 'host') { errMsg('Pick a friend (view as) to rank — tiers belong to them.'); return; }
     try { await api('/api/candidates/tier', { friend: me, candidateId: id, tier: 'F' }); await refresh(); }
-    catch (err) { alert(err.message); }
+    catch (err) { errMsg(err.message); }
   };
   wrap.appendChild(pool);
   wrap.appendChild(el('p', 'meta', '▲ drag into tiers below (or tap a tile, then tap a row)'));
@@ -557,7 +570,7 @@ function renderCandidates(state) {
     pickTop.onclick = async () => {
       pickTop.disabled = true;
       try { await api('/api/candidates/pick', {}); await refresh(); }
-      catch (e) { alert(e.message); pickTop.disabled = false; }
+      catch (e) { errMsg(e.message); pickTop.disabled = false; }
     };
     actions.appendChild(pickTop);
     const sel = el('select');
@@ -570,11 +583,11 @@ function renderCandidates(state) {
     sel.onchange = async () => {
       if (!sel.value) return;
       try { await api('/api/candidates/pick', { candidateId: sel.value }); await refresh(); }
-      catch (e) { alert(e.message); }
+      catch (e) { errMsg(e.message); }
     };
     actions.appendChild(sel);
     const regen = el('button', 'link', 'Regenerate 20');
-    regen.onclick = async () => { try { await api('/api/candidates/generate'); await refresh(); } catch (e) { alert(e.message); } };
+    regen.onclick = async () => { try { await api('/api/candidates/generate'); await refresh(); } catch (e) { errMsg(e.message); } };
     actions.appendChild(regen);
   }
 }
@@ -615,7 +628,7 @@ function renderStory(state, status) {
     genBtn.onclick = async () => {
       genBtn.disabled = true;
       try { await api('/api/narrative', { versionId: v.id }); await refresh(); }
-      catch (e) { alert(e.message); genBtn.disabled = false; }
+      catch (e) { errMsg(e.message); genBtn.disabled = false; }
     };
     card.appendChild(genBtn);
   }
@@ -670,7 +683,7 @@ document.getElementById('org-create').onclick = async () => {
     setRole('host');
     go('room');
   } catch (e) {
-    alert(e.message);
+    errMsg(e.message);
   } finally {
     btn.disabled = false;
   }
@@ -781,7 +794,7 @@ document.getElementById('join-submit').onclick = async () => {
     document.getElementById('join-done-text').textContent =
       'Your memory changed the design brief — a new proposal is being prepared for everyone to approve.';
   } catch (e) {
-    alert(e.message);
+    errMsg(e.message);
   } finally {
     btn.disabled = false;
   }

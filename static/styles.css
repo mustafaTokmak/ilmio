@@ -405,3 +405,11 @@ button.link:hover { color: var(--ink); }
 .cand-thumb .ph-text { font-size: 0.5rem; color: var(--blue-soft); }
 .cand-thumb.err { display: flex; align-items: center; justify-content: center; background: #fdecec; }
 .cand-thumb.err .ph-text { color: #a33; font-size: 0.55rem; }
+
+#toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(80px);
+  background: #1f1f1f; color: #fdf6ea; padding: .7rem 1.2rem; border-radius: 999px;
+  font-size: .9rem; opacity: 0; transition: all .25s ease; pointer-events: none;
+  z-index: 999; box-shadow: 0 8px 24px rgba(0,0,0,.25); max-width: 80vw; text-align: center;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
