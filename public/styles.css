@@ -47,8 +47,19 @@ code { background: var(--paper-deep); padding: 0.1rem 0.35rem; border-radius: 4p
   padding: 7vh 2rem;
   text-align: center;
 }
-.frame.narrow { max-width: 480px; text-align: left; }
+.frame.narrow {
+  max-width: 480px;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--line);
+  outline: 1px solid var(--line);
+  outline-offset: 6px;
+  border-radius: 4px;
+  padding: 2.5rem 2.6rem 2.2rem;
+  margin-top: 8vh;
+}
 .frame.narrow h2 { font-size: 1.9rem; margin: 0.2rem 0 0.8rem; }
+.frame.narrow .mascot.small { margin-left: 0; margin-bottom: 0.4rem; }
 
 .mascot { width: 150px; display: block; margin: 0 auto 0.5rem; }
 .mascot.small { width: 90px; margin-bottom: 0.8rem; }
@@ -342,5 +353,6 @@ button.link:hover { color: var(--ink); }
   .who-grid, .approvals { grid-template-columns: 1fr; }
   .room-bar { flex-direction: column; align-items: flex-start; }
   .welcome .frame { margin: 6vh 1rem; padding: 2.5rem 1.5rem; }
+  .frame.narrow { margin: 4vh 1rem; padding: 1.8rem 1.4rem; }
   .welcome h1 { font-size: 2.2rem; }
 }
