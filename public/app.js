@@ -87,11 +87,45 @@ function renderFriends(state) {
       ta.id = `contrib-${f}`;
       ta.value = SAM_LINE;
       card.appendChild(ta);
+
+      // Brainstorm: many people stall on a blank box — offer memory+motif ideas.
+      let pickedInfluence = null;
+      const ideasBox = el('div', 'ideas hidden');
+      const brainstormBtn = el('button', 'secondary', 'Need ideas?');
+      brainstormBtn.onclick = async () => {
+        if (!ideasBox.classList.contains('hidden')) {
+          ideasBox.classList.add('hidden');
+          return;
+        }
+        const res = await fetch(`/api/suggest?friend=${f}`);
+        const { ideas } = await res.json();
+        ideasBox.innerHTML = '';
+        for (const idea of ideas) {
+          const chip = el('div', 'idea-chip');
+          chip.appendChild(el('span', 'idea-memory', `“${idea.memory}”`));
+          chip.appendChild(el('span', 'idea-influence', `→ ${idea.influence}`));
+          chip.onclick = () => {
+            ta.value = idea.memory;
+            pickedInfluence = idea.influence;
+            ideasBox.classList.add('hidden');
+          };
+          ideasBox.appendChild(chip);
+        }
+        ideasBox.appendChild(el('p', 'meta', 'demo suggestions — pick one or write your own'));
+        ideasBox.classList.remove('hidden');
+      };
+      card.appendChild(brainstormBtn);
+      card.appendChild(ideasBox);
+
       const btn = el('button', null, `Add ${FRIEND_NAMES[f]}'s memory`);
       btn.onclick = async () => {
         btn.disabled = true;
         try {
-          await api('/api/contributions', { friend: f, text: ta.value });
+          await api('/api/contributions', {
+            friend: f,
+            text: ta.value,
+            intendedInfluence: pickedInfluence,
+          });
           await refresh();
           // Auto-start generation for the new brief — the "one click" stage move.
           await api('/api/generate');
@@ -281,6 +315,22 @@ function renderStory(state, status) {
   const v = currentVersion(state);
   card.appendChild(el('p', null,
     `For ${state.gift.recipient} — three friends, three memories, one ${state.gift.category}.`));
+
+  // Gift narrative — generated once all friends approve.
+  if (v.narrative) {
+    const n = el('div', 'narrative');
+    n.appendChild(el('p', 'narrative-text', `“${v.narrative.text}”`));
+    n.appendChild(el('p', 'meta', v.narrative.label));
+    card.appendChild(n);
+  } else {
+    const genBtn = el('button', null, 'Generate gift narrative');
+    genBtn.onclick = async () => {
+      genBtn.disabled = true;
+      try { await api('/api/narrative', { versionId: v.id }); await refresh(); }
+      catch (e) { alert(e.message); genBtn.disabled = false; }
+    };
+    card.appendChild(genBtn);
+  }
 
   for (const inf of v.brief.influences) {
     const callout = (v.bundle.callouts || []).find((c) => c.friend === inf.friend);

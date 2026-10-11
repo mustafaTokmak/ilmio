@@ -215,3 +215,47 @@ test('approving before any artwork exists is rejected', () => {
   const state = engine.createState(SEED);
   assert.throws(() => engine.approve(state, 'v1', 'alex'), /no-artwork/);
 });
+
+// --- brainstorm suggestions + gift narrative ---
+
+const { suggest } = require('../src/suggest');
+const { narrate, attachNarrative } = require('../src/narrative');
+
+test('suggestions skip memories a friend already contributed', () => {
+  const state = engine.createState(SEED);
+  const ideas = suggest(state.gift, 'sam', state.contributions, 10);
+  const texts = ideas.map((i) => i.memory.toLowerCase());
+  assert.ok(!texts.includes('lemon sprigs from our garden walks'));
+  assert.ok(!texts.includes('blue tiled courtyards and turkish motifs'));
+  assert.ok(ideas.length > 0);
+  assert.ok(ideas.every((i) => i.influence));
+});
+
+test('suggestions are deterministic', () => {
+  const a = suggest(SEED.gift, 'sam', SEED.contributions, 3);
+  const b = suggest(SEED.gift, 'sam', SEED.contributions, 3);
+  assert.deepEqual(a, b);
+});
+
+test('narrative mentions every contributing friend and the product', () => {
+  const state = readyState();
+  engine.submitContribution(state, 'sam', 'Calm home. Minimal pattern. No lettering.');
+  const job = engine.requestGeneration(state, 'job2');
+  engine.resolveGeneration(state, job.id, bundleFor(state));
+  const v = engine.currentVersion(state);
+  const text = narrate(v, state.gift);
+  assert.ok(text.includes('Alex'));
+  assert.ok(text.includes('Deniz'));
+  assert.ok(text.includes('Sam'));
+  assert.ok(text.includes('Maya'));
+  assert.ok(text.includes(v.bundle.product.name));
+});
+
+test('attachNarrative stores provenance label on the version', () => {
+  const state = readyState();
+  const v = engine.currentVersion(state);
+  attachNarrative(v, state.gift);
+  assert.equal(v.narrative.engine, 'local-template');
+  assert.ok(v.narrative.label.includes('not a cloud AI'));
+  assert.ok(v.narrative.generatedAt);
+});

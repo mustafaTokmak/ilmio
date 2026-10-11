@@ -8,6 +8,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const engine = require('./src/state');
 const { createRecordedProvider } = require('./src/provider');
+const { suggest } = require('./src/suggest');
+const { attachNarrative } = require('./src/narrative');
 
 const PORT = process.env.PORT || 3847;
 const ROOT = __dirname;
@@ -163,6 +165,29 @@ async function handleApi(req, res, url) {
     const v = engine.refreshPrice(state, body.versionId, body.quote);
     saveState();
     return sendJson(res, 200, { version: v, status: engine.giftStatus(state) });
+  }
+
+  if (req.method === 'GET' && p === '/api/suggest') {
+    const friend = url.searchParams.get('friend') || '';
+    if (!engine.FRIENDS.includes(friend)) {
+      return sendJson(res, 400, { error: `unknown friend: ${friend}` });
+    }
+    const ideas = suggest(state.gift, friend, state.contributions, Number(url.searchParams.get('count')) || 3);
+    return sendJson(res, 200, { ideas });
+  }
+
+  if (req.method === 'POST' && p === '/api/narrative') {
+    const version = state.versions.find((v) => v.id === body.versionId);
+    if (!version) return sendJson(res, 400, { error: `unknown version: ${body.versionId}` });
+    if (version.id !== state.currentVersionId || version.status !== 'ready') {
+      return sendJson(res, 400, { error: 'narrative is only generated for the current ready version' });
+    }
+    if (!engine.isUnanimous(version)) {
+      return sendJson(res, 400, { error: 'all friends must approve before the gift narrative is written' });
+    }
+    attachNarrative(version, state.gift);
+    saveState();
+    return sendJson(res, 200, { narrative: version.narrative });
   }
 
   if (req.method === 'POST' && p === '/api/reset') {

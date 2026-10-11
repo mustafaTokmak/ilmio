@@ -158,6 +158,27 @@ code { background: var(--ivory-deep); padding: 0.1rem 0.35rem; border-radius: 4p
 
 .story { background: linear-gradient(180deg, #fffdf7, var(--ivory-deep)); }
 .hidden { display: none; }
+
+.ideas { margin-top: 0.6rem; }
+.idea-chip {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  margin-bottom: 0.4rem;
+  background: #fff;
+  cursor: pointer;
+}
+.idea-chip:hover { border-color: var(--blue); background: var(--ivory); }
+.idea-memory { display: block; font-style: italic; }
+.idea-influence { display: block; font-size: 0.8rem; color: var(--blue); }
+
+.narrative {
+  border-left: 3px solid var(--lemon);
+  padding: 0.6rem 0 0.6rem 1rem;
+  margin: 0.9rem 0;
+  background: #fffdf7;
+}
+.narrative-text { font-style: italic; font-size: 1.05rem; line-height: 1.6; margin: 0 0 0.4rem; }
 .story-row { display: flex; align-items: baseline; gap: 0.6rem; margin: 0.5rem 0; }
 .story-row .who { color: var(--blue-dark); font-weight: bold; min-width: 4.5rem; }
 .story-row .arrow { color: var(--lemon); }
