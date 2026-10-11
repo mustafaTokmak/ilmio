@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>One Gift, Many People</title>
+  <title>ilmio — one gift, many people</title>
+  <link rel="icon" type="image/png" href="ilmio.png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -11,13 +12,8 @@
   <!-- ══ Welcome ══ -->
   <section id="screen-welcome" class="screen welcome">
     <div class="frame">
-      <svg class="motif" viewBox="0 0 60 90" aria-hidden="true">
-        <path d="M30 12 C22 26 22 34 30 44 C38 34 38 26 30 12 Z" fill="none" stroke="currentColor" stroke-width="2.5"/>
-        <path d="M30 44 L30 74" stroke="currentColor" stroke-width="2.5"/>
-        <path d="M30 58 C22 56 16 50 15 42 C23 44 28 50 30 58 Z" fill="none" stroke="currentColor" stroke-width="2.5"/>
-        <path d="M30 58 C38 56 44 50 45 42 C37 44 32 50 30 58 Z" fill="none" stroke="currentColor" stroke-width="2.5"/>
-      </svg>
-      <h1>One Gift,<br/>Many People</h1>
+      <img class="mascot" src="ilmio.png" alt="ilmio — a little yarn friend" />
+      <h1>ilmio</h1>
       <p class="pitch">Everyone adds a memory. Together, you make one gift.</p>
       <div class="welcome-actions">
         <button class="big" data-go="organize">I'm organizing a gift</button>
@@ -79,10 +75,7 @@
       <button class="link" id="join-back">← pick someone else</button>
     </div>
     <div class="frame narrow hidden" id="join-done">
-      <svg class="motif small" viewBox="0 0 60 90" aria-hidden="true">
-        <path d="M30 12 C22 26 22 34 30 44 C38 34 38 26 30 12 Z" fill="none" stroke="currentColor" stroke-width="2.5"/>
-        <path d="M30 44 L30 74" stroke="currentColor" stroke-width="2.5"/>
-      </svg>
+      <img class="mascot small" src="ilmio.png" alt="ilmio" />
       <h2>Your memory is in</h2>
       <p class="hint" id="join-done-text"></p>
       <button class="big" id="join-watch">Watch the gift room →</button>
@@ -93,7 +86,7 @@
   <section id="screen-room" class="screen room hidden">
     <header class="room-bar">
       <div>
-        <h1 id="room-title">One Gift, Many People</h1>
+        <h1 id="room-title"><img class="mascot tiny" src="ilmio.png" alt="" /> ilmio</h1>
         <p id="room-gift" class="gift-line"></p>
       </div>
       <div class="role-box">
