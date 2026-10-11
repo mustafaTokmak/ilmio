@@ -428,3 +428,6 @@ body.noscroll { height: 100vh; overflow: hidden; }
 .welcome h1 { font-size: 5rem; }
 .welcome .pitch { font-size: 1.3rem; margin-bottom: 2.2rem; padding: 0 2rem; }
 .welcome-actions { padding-bottom: 3rem; }
+
+.welcome { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.welcome .frame { min-height: 0; margin: 0; }
