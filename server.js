@@ -145,8 +145,14 @@ async function handleApi(req, res, url) {
     saveState();
     // Resolve asynchronously; superseded/mismatched results are rejected by the engine.
     done.then(({ bundle, error }) => {
-      engine.resolveGeneration(state, jobId, bundle, error);
-      saveState();
+      try {
+        engine.resolveGeneration(state, jobId, bundle, error);
+        saveState();
+      } catch (e) {
+        // A reset or reseed may wipe the job before a slow provider responds —
+        // drop the late result instead of crashing the server.
+        console.warn(`dropping late generation result for ${jobId}: ${e.message}`);
+      }
     });
     return sendJson(res, 202, { jobId, fingerprint: current.brief.fingerprint });
   }
