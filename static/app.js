@@ -62,6 +62,7 @@ function showScreen(name) {
   for (const s of document.querySelectorAll('.screen')) s.classList.add('hidden');
   const scr = document.getElementById('screen-' + name);
   if (scr) scr.classList.remove('hidden');
+  document.body.classList.toggle('noscroll', name !== 'room');
   if (name === 'room') refresh();
   if (name === 'join') renderJoin();
 }
