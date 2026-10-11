@@ -14,7 +14,8 @@ const FRIEND_NAMES = {
   sam: 'Sam',
 };
 
-const PALETTE = ['muted blue', 'warm ivory', 'a small lemon accent'];
+const PALETTE = ['cobalt blue', 'warm ivory', 'a small lemon accent'];
+const STYLE = 'Turkish İznik ceramic-tile motifs — stylized tulips, thin geometric border, hand-painted feel';
 
 function now() {
   return new Date().toISOString();
@@ -44,6 +45,7 @@ function buildBrief(gift, contributions) {
   const text =
     `A ${gift.occasion} gift for ${gift.recipient} — ${gift.category}. ` +
     `Influences: ${parts.join('; ')}. ` +
+    `Style: ${STYLE}. ` +
     `Palette: ${PALETTE.join(', ')}.`;
 
   return {

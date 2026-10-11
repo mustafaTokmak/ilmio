@@ -5,7 +5,7 @@
     "kind": "arcade-api",
     "label": "Recorded via Arcade API",
     "method": "patterns/create → products/create (category \"Decorative Pillows\")",
-    "recordedAt": "2026-10-11T18:51:18.082Z"
+    "recordedAt": "2026-10-11T19:00:48.262Z"
   },
   "product": {
     "name": "Decorative Pillows — generated pattern",
@@ -35,8 +35,8 @@
     }
   },
   "arcade": {
-    "patternId": "cmv46i1d5002nlm10cvvr4aud",
-    "productId": "574cd606-19da-4272-9425-b0e899420166",
+    "patternId": "cmv46ufe4007rpb10pm2tes34",
+    "productId": "0b53f72d-39a1-43be-bf40-5a35b26149cc",
     "categoryId": "0ef267de-f8c2-4a93-89a3-63be809f68e2"
   }
 }

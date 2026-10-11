@@ -1,17 +1,20 @@
-/* One Gift, Many People — calm textile-inspired look.
-   Palette: ink navy, warm ivory paper, muted blue, lemon accent. */
+/* One Gift, Many People — Arcade-brand reskin.
+   Palette sampled from arcade.ai: warm cream base, near-black ink,
+   acid-lime primary accent. İznik story stays in the product, not the chrome. */
 
 :root {
-  --ink: #22384a;
-  --blue: #4a6b84;
-  --blue-soft: #7d97aa;
-  --paper: #f5efe2;
-  --paper-deep: #ece2cd;
-  --card: #fdfaf2;
-  --lemon: #d9a92e;
-  --line: #d8cdb4;
-  --ok: #4c7a5b;
-  --warn: #a06a2c;
+  --ink: #16130f;
+  --blue: #5d564b;          /* neutral secondary (kept name for reach) */
+  --blue-soft: #8c8478;
+  --paper: #f6f3ec;
+  --paper-deep: #ece7db;
+  --card: #fffefb;
+  --lime: #d8f24f;          /* arcade 'Create' accent */
+  --lime-ink: #3d4a08;      /* readable text on/around lime */
+  --lemon: #b7cf2e;         /* small accents (borders, arrows) */
+  --line: #e2dbcc;
+  --ok: #3f6b34;
+  --warn: #8f6216;
   --bad: #8a3b3b;
 }
 
@@ -24,14 +27,14 @@ body {
   color: var(--ink);
   /* faint geometric tile border feel */
   background-image:
-    repeating-linear-gradient(45deg, rgba(74,107,132,0.035) 0 2px, transparent 2px 22px),
-    repeating-linear-gradient(-45deg, rgba(74,107,132,0.035) 0 2px, transparent 2px 22px);
+    repeating-linear-gradient(45deg, rgba(22,19,15,0.03) 0 2px, transparent 2px 22px),
+    repeating-linear-gradient(-45deg, rgba(22,19,15,0.03) 0 2px, transparent 2px 22px);
 }
 
 .screen { min-height: 100vh; }
 .hidden { display: none !important; }
 
-h1, h2, h3, h4 { color: var(--ink); font-weight: normal; }
+h1, h2, h3, h4 { color: var(--ink); font-weight: normal; font-family: Didot, 'Bodoni MT', 'Playfair Display', Georgia, serif; }
 button { font: inherit; cursor: pointer; }
 code { background: var(--paper-deep); padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.8em; }
 .meta { font-size: 0.78rem; color: var(--blue-soft); }
@@ -60,7 +63,7 @@ code { background: var(--paper-deep); padding: 0.1rem 0.35rem; border-radius: 4p
   margin-bottom: 10vh;
   padding: 4rem 3rem;
 }
-.welcome h1 { font-size: 3rem; line-height: 1.1; margin: 0 0 0.8rem; letter-spacing: 0.01em; }
+.welcome h1 { font-size: 3rem; line-height: 1.05; margin: 0 0 0.8rem; letter-spacing: 0.005em; font-weight: 500; }
 .pitch { color: var(--blue); font-style: italic; font-size: 1.15rem; margin: 0 0 2.5rem; }
 
 .welcome-actions { display: flex; flex-direction: column; gap: 0.8rem; align-items: center; }
@@ -84,21 +87,23 @@ input[type=text], select, textarea {
   color: var(--ink);
   background: #fff;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 999px;
 }
-textarea { resize: vertical; }
+textarea { resize: vertical; border-radius: 14px; }
+select { border-radius: 999px; }
 
 /* ── buttons ─────────────────────────────────────────── */
 button.big {
   margin-top: 1.6rem;
   padding: 0.85rem 2.2rem;
   font-size: 1.05rem;
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--lime);
+  color: var(--ink);
   border: none;
-  border-radius: 6px;
+  border-radius: 999px;
+  font-family: Georgia, serif;
 }
-button.big:hover { background: var(--blue); }
+button.big:hover { background: #c8e53f; }
 button.big.ghost { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
 button.big.ghost:hover { background: var(--paper-deep); }
 button.big:disabled { opacity: 0.45; cursor: default; }
@@ -110,7 +115,7 @@ button.secondary {
   background: transparent;
   color: var(--blue);
   border: 1px solid var(--blue-soft);
-  border-radius: 6px;
+  border-radius: 999px;
 }
 button.secondary:hover { background: var(--paper-deep); }
 
@@ -171,7 +176,7 @@ button.link:hover { color: var(--ink); }
   background: var(--card);
   color: var(--blue);
 }
-.role-switch button.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.role-switch button.active { background: var(--ink); color: var(--lime); border-color: var(--ink); }
 
 .room-grid {
   display: grid;
@@ -284,12 +289,12 @@ button.link:hover { color: var(--ink); }
 .approval button:disabled { opacity: 0.4; }
 
 .host-box { margin-top: 1rem; border-top: 1px dashed var(--line); padding-top: 0.8rem; }
-.host-box button { font-size: 0.85rem; padding: 0.45rem 0.9rem; margin: 0.3rem 0.3rem 0 0; border-radius: 6px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); }
+.host-box button { font-size: 0.85rem; padding: 0.45rem 0.9rem; margin: 0.3rem 0.3rem 0 0; border-radius: 999px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); }
 .host-box button.secondary { background: transparent; color: var(--blue); border-color: var(--blue-soft); }
 .host-box button:disabled { opacity: 0.45; }
 
 /* story card */
-.story { border-color: var(--lemon); background: linear-gradient(180deg, var(--card), var(--paper-deep)); }
+.story { border-color: var(--lemon); background: linear-gradient(180deg, var(--card), #f3f7dd); }
 .story-row { display: flex; align-items: baseline; gap: 0.6rem; margin: 0.45rem 0; }
 .story-row .who { min-width: 4.2rem; font-size: 0.9rem; }
 .story-row .arrow { color: var(--lemon); }
