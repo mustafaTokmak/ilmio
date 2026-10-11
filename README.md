@@ -42,7 +42,7 @@ npm run build:static       # regenerate the client-only static build
 
 - `src/state.js` — pure state engine: brief builder, version lifecycle, approvals, quote rules
 - `src/provider.js` — cache-first recorded bundles with an optional Arcade API fallback
-- `src/arcade.js` — Arcade image-generation provider
+- `src/arcade.js` — live Arcade API provider (pattern → product → quote), saves results as recorded bundles
 - `src/llm.js` — optional OpenRouter memory interpretation and composition
 - `src/suggest.js` — local brainstorm suggestions
 - `src/narrative.js` — local gift-story composer
@@ -55,7 +55,7 @@ npm run build:static       # regenerate the client-only static build
 - `test/` — `node:test` checks for state rules and static-build consistency
 - `demo-voiceover-transcript.md` — demo voiceover transcript
 
-Prepared bundles in `bundles/` are labeled illustrations, not Arcade API responses.
+Bundles in `bundles/` are recorded Arcade API results (see each bundle's `provenance`), replayed offline so rehearsal never depends on the network.
 
 ## Static deploy
 
