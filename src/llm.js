@@ -9,7 +9,7 @@
 // provenance stays explicit ("who wrote this" is always visible).
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const DEFAULT_MODEL = 'openai/gpt-4o-mini';
+const DEFAULT_MODEL = 'anthropic/claude-haiku-4.5';
 
 async function chat(apiKey, model, messages, { temperature = 0.7, maxTokens = 400 } = {}) {
   const ctrl = new AbortController();
