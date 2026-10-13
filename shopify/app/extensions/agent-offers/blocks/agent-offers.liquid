@@ -1,0 +1,76 @@
+{%- comment -%}
+  Loads the OfferAd storefront script through the app proxy, so it and its
+  requests stay on the store's own domain. The script reads the data attributes
+  below: where the offer endpoint is, which shop and product this page is, and
+  which of its three parts the merchant switched on.
+{%- endcomment -%}
+{%- liquid
+  # Merchants can move the app proxy per store, so the path is a setting.
+  assign path = block.settings.proxy_path | default: '/apps/offerad' | strip
+  assign first = path | slice: 0
+  unless first == '/'
+    assign path = path | prepend: '/'
+  endunless
+  assign last_index = path.size | minus: 1
+  assign last = path | slice: last_index
+  if last == '/' and last_index > 0
+    assign path = path | slice: 0, last_index
+  endif
+  assign endpoint = request.origin | append: path
+-%}
+{%- if block.settings.webmcp or block.settings.show_box or block.settings.json_ld -%}
+  <script
+    src="{{ endpoint | escape }}/embed.js"
+    data-endpoint="{{ endpoint | escape }}"
+    data-shop="{{ shop.permanent_domain | escape }}"
+    data-webmcp="{{ block.settings.webmcp }}"
+    {%- if request.page_type == 'product' %} data-product="{{ product.handle | escape }}"{% endif %}
+    {%- if block.settings.show_box %} data-box="true"{% endif %}
+    {%- if block.settings.show_box and block.settings.box_target != blank %} data-box-target="{{ block.settings.box_target | strip | escape }}"{% endif %}
+    {%- if block.settings.json_ld %} data-jsonld="true"{% endif %}
+    defer
+  ></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Offers for AI agents",
+  "target": "body",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "webmcp",
+      "label": "Offer tool for AI agents",
+      "info": "Lets an AI agent that browses the store ask it for an offer (WebMCP). Shoppers see nothing.",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "json_ld",
+      "label": "Offer link in page data",
+      "info": "Adds JSON-LD to product pages that says where an offer can be asked for. Shoppers see nothing.",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_box",
+      "label": "Offer box on product pages",
+      "info": "Shows an \"Ask this store for an offer\" box on product pages.",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "box_target",
+      "label": "Offer box position",
+      "info": "Optional. CSS selector of the element the box goes after. Leave empty to put it under the price."
+    },
+    {
+      "type": "text",
+      "id": "proxy_path",
+      "label": "App proxy path",
+      "info": "Change this only if the app proxy URL was customized under Settings > Apps.",
+      "default": "/apps/offerad"
+    }
+  ]
+}
+{% endschema %}

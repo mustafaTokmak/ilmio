@@ -1,0 +1,6 @@
+# Theme app extension with one app embed block (blocks/agent-offers.liquid).
+# Merchants switch it on under Online Store > Themes > Customize > App embeds.
+# No uid here: the CLI derives one from the handle when the toml has none.
+name = "Agent offers"
+handle = "agent-offers"
+type = "theme"

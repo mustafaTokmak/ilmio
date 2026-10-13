@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  "name": "offerad-offers",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-13",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/apps/*"
+    ]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "OFFERS",
+        "class_name": "Offers"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "Offers"
+      ]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "DEMO_HOOKS": "box,desc,jsonld,webmcp,policy"
+  }
+}

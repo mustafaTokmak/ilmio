@@ -1,0 +1,17 @@
+{
+  "name": "offerad-agent-offers",
+  "version": "0.0.1",
+  "license": "UNLICENSED",
+  "private": true,
+  "workspaces": [
+    "extensions/*"
+  ],
+  "scripts": {
+    "shopify": "shopify",
+    "build": "shopify app build",
+    "dev": "shopify app dev",
+    "info": "shopify app info",
+    "deploy": "shopify app deploy",
+    "check": "node ../scripts/check-function.mjs"
+  }
+}

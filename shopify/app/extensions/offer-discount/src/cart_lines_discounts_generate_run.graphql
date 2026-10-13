@@ -1,0 +1,31 @@
+query CartInput {
+  cart {
+    lines {
+      id
+      quantity
+      cost {
+        amountPerQuantity {
+          amount
+          currencyCode
+        }
+      }
+      merchandise {
+        ... on ProductVariant {
+          id
+        }
+      }
+    }
+  }
+  discount {
+    discountClasses
+    metafield(namespace: "$app", key: "offer") {
+      jsonValue
+    }
+  }
+  shop {
+    localTime {
+      date
+    }
+  }
+  triggeringDiscountCode
+}

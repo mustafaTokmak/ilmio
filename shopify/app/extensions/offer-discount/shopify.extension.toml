@@ -1,0 +1,27 @@
+# Discount Function: one discount code stands for one composite offer.
+# Layout and keys follow what `shopify app generate extension --template discount`
+# writes for JavaScript. schema.graphql belongs to this api_version; after a
+# bump, refresh it with `shopify app function schema`.
+# No uid here: the CLI derives one from the handle when the toml has none.
+api_version = "2026-07"
+
+[[extensions]]
+name = "t:name"
+# The functionHandle the service passes to discountCodeAppCreate.
+handle = "offer-discount"
+type = "function"
+description = "t:description"
+
+  [[extensions.targeting]]
+  target = "cart.lines.discounts.generate.run"
+  input_query = "src/cart_lines_discounts_generate_run.graphql"
+  export = "cart-lines-discounts-generate-run"
+
+  [[extensions.targeting]]
+  target = "cart.delivery-options.discounts.generate.run"
+  input_query = "src/cart_delivery_options_discounts_generate_run.graphql"
+  export = "cart-delivery-options-discounts-generate-run"
+
+  [extensions.build]
+  command = ""
+  path = "dist/function.wasm"

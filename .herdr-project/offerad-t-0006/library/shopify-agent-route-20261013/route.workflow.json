@@ -1,0 +1,130 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "OfferAd: agent request to Shopify offer",
+    "quality_profile": "showcase",
+    "animation": "none",
+    "locale": "en"
+  },
+  "lanes": [
+    {
+      "id": "offer",
+      "label": "Storefront tool or offer connector \u2192 seller service \u2192 Shopify"
+    }
+  ],
+  "mainPath": [
+    "ask",
+    "verify",
+    "rules",
+    "choose",
+    "mint",
+    "cart"
+  ],
+  "nodes": [
+    {
+      "id": "ask",
+      "lane": "offer",
+      "col": 0,
+      "type": "frontend",
+      "label": "Agent asks store",
+      "sublabel": "Priority + competing link",
+      "width": 160
+    },
+    {
+      "id": "verify",
+      "lane": "offer",
+      "col": 1,
+      "type": "security",
+      "label": "Check evidence",
+      "sublabel": "Fetch and match product",
+      "width": 160
+    },
+    {
+      "id": "rules",
+      "lane": "offer",
+      "col": 2,
+      "type": "backend",
+      "label": "Merchant rules",
+      "sublabel": "Floors and approved benefits",
+      "width": 160
+    },
+    {
+      "id": "choose",
+      "lane": "offer",
+      "col": 3,
+      "type": "frontend",
+      "label": "Buyer chooses",
+      "sublabel": "Review exact offer terms",
+      "width": 160
+    },
+    {
+      "id": "mint",
+      "lane": "offer",
+      "col": 4,
+      "type": "backend",
+      "label": "Issue offer code",
+      "sublabel": "Single use; no payment",
+      "width": 160
+    },
+    {
+      "id": "cart",
+      "lane": "offer",
+      "col": 5,
+      "type": "cloud",
+      "label": "Shopify checkout",
+      "sublabel": "Apply code and cart items",
+      "width": 160
+    }
+  ],
+  "edges": [
+    {
+      "id": "step0",
+      "from": "ask",
+      "to": "verify",
+      "role": "main"
+    },
+    {
+      "id": "step1",
+      "from": "verify",
+      "to": "rules",
+      "role": "main"
+    },
+    {
+      "id": "step2",
+      "from": "rules",
+      "to": "choose",
+      "role": "main"
+    },
+    {
+      "id": "step3",
+      "from": "choose",
+      "to": "mint",
+      "role": "main"
+    },
+    {
+      "id": "step4",
+      "from": "mint",
+      "to": "cart",
+      "role": "main"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Discovery",
+      "items": [
+        "WebMCP on supported browsers; MCP for installed connectors",
+        "Whether consumer agents discover it still needs a stock-runtime test"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Beyond price",
+      "items": [
+        "Functions apply shipping, gift and price benefits at checkout",
+        "Returns, guarantees and future credit need an order fulfillment service"
+      ]
+    }
+  ]
+}

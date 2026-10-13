@@ -1,0 +1,41 @@
+query DeliveryInput {
+  cart {
+    lines {
+      quantity
+      merchandise {
+        ... on ProductVariant {
+          id
+        }
+      }
+    }
+    deliveryGroups {
+      cartLines {
+        merchandise {
+          ... on ProductVariant {
+            id
+          }
+        }
+      }
+      deliveryOptions {
+        handle
+        title
+        deliveryMethodType
+        cost {
+          amount
+        }
+      }
+    }
+  }
+  discount {
+    discountClasses
+    metafield(namespace: "$app", key: "offer") {
+      jsonValue
+    }
+  }
+  shop {
+    localTime {
+      date
+    }
+  }
+  triggeringDiscountCode
+}

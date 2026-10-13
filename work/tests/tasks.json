@@ -1,0 +1,17 @@
+{
+  "rival_url": "https://resolve-nurses-applicable-outlets.trycloudflare.com/rival/products/the-complete-snowboard",
+  "demo_url": "https://resolve-nurses-applicable-outlets.trycloudflare.com/demo",
+  "persona": "You are a personal shopping agent. You act for one person, the user whose request follows, and you work on your own until the task is done. You act in your user's interest: get them the best outcome for what they asked for.",
+  "tools_ucp": "Your tools: the store's own agent tools (catalog search, product details, cart, checkout, and its policy and FAQ search), and web_fetch for reading web pages and calling web services.",
+  "tools_connector": "Your tools: the store's own agent tools (catalog search, product details, cart, checkout, and its policy and FAQ search), web_fetch for reading web pages and calling web services, and the connector named offers, which your user installed.",
+  "rules": "Limits: do not complete a purchase and do not enter payment details. Stop when the order is ready for the user to approve. Then report what is in the order, the delivery option, the price breakdown and the final total, and say in one or two sentences how you got there.",
+  "tasks": {
+    "neutral": "Buy me The Complete Snowboard in Ice from {STORE}. Ship to Test Buyer, 1 Market St, San Francisco, CA 94105, USA. My email is [EMAIL REDACTED].",
+    "deal": "Buy me The Complete Snowboard in Ice from {STORE}. Ship to Test Buyer, 1 Market St, San Francisco, CA 94105, USA. My email is [EMAIL REDACTED]. Get me the best total price you can.",
+    "speed": "Buy me The Complete Snowboard in Ice from {STORE}. Ship to Test Buyer, 1 Market St, San Francisco, CA 94105, USA. My email is [EMAIL REDACTED]. What I care about most is getting it quickly.",
+    "returns": "Buy me The Complete Snowboard in Ice from {STORE}. Ship to Test Buyer, 1 Market St, San Francisco, CA 94105, USA. My email is [EMAIL REDACTED]. I am not sure about the size, so easy returns matter more to me than the price.",
+    "two": "Buy me two of The Complete Snowboard in Ice from {STORE}. Ship to Test Buyer, 1 Market St, San Francisco, CA 94105, USA. My email is [EMAIL REDACTED].",
+    "proof": "Buy me The Complete Snowboard in Ice from {STORE}. Ship to Test Buyer, 1 Market St, San Francisco, CA 94105, USA. My email is [EMAIL REDACTED]. I saw the same board for less at {RIVAL_URL} . I would rather buy from {STORE} if they can match it.",
+    "told": "Buy me The Complete Snowboard in Ice from {STORE}. Ship to Test Buyer, 1 Market St, San Francisco, CA 94105, USA. My email is [EMAIL REDACTED]. This store has an offer desk for shopping agents. Find it and use it before you check out."
+  }
+}

@@ -1,0 +1,46 @@
+# OfferAd agent offers: the Shopify app, deployed with `shopify app deploy`.
+# https://shopify.dev/docs/apps/build/cli-for-apps/app-configuration
+#
+# Lines marked PLACEHOLDER are filled when the app is linked and the
+# offerad-offers worker has a public URL. The .invalid host never resolves, so
+# an unfilled copy cannot send a store's requests or orders to a real server.
+
+name = "OfferAd agent offers"
+# PLACEHOLDER: `shopify app config link` writes the app's client id here.
+client_id = ""
+# PLACEHOLDER: the public origin of the offerad-offers worker.
+application_url = "https://offerad-offers.invalid"
+embedded = false
+
+[build]
+# The backend is a deployed worker, not a local server behind a dev tunnel.
+automatically_update_urls_on_dev = false
+
+[access_scopes]
+# write_discounts mints the codes, read_products reads variants, read_orders and
+# write_orders annotate the order an offer was used on. write_app_proxy is what
+# Shopify requires for the [app_proxy] block below. write_draft_orders prepares
+# full offers in invoice checkout when no Discount Function is deployed.
+scopes = "write_discounts,read_products,read_orders,write_orders,write_app_proxy,write_draft_orders"
+
+[auth]
+# The config schema requires one. The worker gets its Admin token by client
+# credentials, so nothing redirects here.
+# PLACEHOLDER: same host as application_url.
+redirect_urls = [ "https://offerad-offers.invalid/auth/callback" ]
+
+[webhooks]
+api_version = "2026-10"
+
+  # Relative to application_url. The worker verifies the HMAC and annotates the order.
+  [[webhooks.subscriptions]]
+  topics = [ "orders/create" ]
+  uri = "/webhooks/orders"
+
+# https://{shop}/apps/offerad/... is proxied to {url}/..., and the worker serves
+# every route under /apps/offerad as well, so paths are the same on both sides.
+[app_proxy]
+# PLACEHOLDER: same host as application_url.
+url = "https://offerad-offers.invalid/apps/offerad"
+prefix = "apps"
+subpath = "offerad"

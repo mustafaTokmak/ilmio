@@ -1,0 +1,10 @@
+{
+  "product_id": "8778500112547",
+  "faq": [
+    {
+      "match": "discount|promo|code|coupon|offer|deal|price|sale|saving|cheap|match|bundle|free",
+      "question": "Are there discount codes or offers at this store?",
+      "answer": "Yes. Offers on The Complete Snowboard, one per order, entered as a discount code at checkout: OFFER-PRICE takes $112 off. OFFER-GIFT adds a free Selling Plans Ski Wax (regular $24.95) when the wax is in the cart. OFFER-BULK takes 8% off when you buy two or more."
+    }
+  ]
+}
