@@ -23,6 +23,7 @@
 import { spawn } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { appendFileSync, mkdirSync } from 'node:fs';
 import readline from 'node:readline';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -37,6 +38,38 @@ if (!KEY) { console.error('OPENROUTER_API_KEY is not set'); process.exit(2); }
 if (!PROMPT) { console.error('BUYER_PROMPT is not set'); process.exit(2); }
 
 const emit = obj => process.stdout.write(JSON.stringify(obj) + '\n');
+
+// Calls to servers other than the store (the offers connector) are logged here
+// too, so a run's store-calls.jsonl covers everything the agent did.
+const LOG = process.env.STORE_MCP_LOG || '';
+const logCall = obj => {
+  if (!LOG) return;
+  try { mkdirSync(dirname(LOG), { recursive: true }); appendFileSync(LOG, JSON.stringify(obj) + '\n'); } catch { /* never fatal */ }
+};
+
+function findAll(node, key, acc = [], seen = new Set()) {
+  if (!node || typeof node !== 'object' || seen.has(node)) return acc;
+  seen.add(node);
+  if (Array.isArray(node)) { node.forEach(v => findAll(v, key, acc, seen)); return acc; }
+  for (const [k, v] of Object.entries(node)) {
+    if (k === key) acc.push(v);
+    else if (v && typeof v === 'object') findAll(v, key, acc, seen);
+  }
+  return acc;
+}
+
+function logExtract(text) {
+  let data;
+  try { data = JSON.parse(text); } catch { return {}; }
+  const out = {};
+  const discounts = findAll(data, 'discounts').find(d => d && Array.isArray(d.applied));
+  if (discounts) out.discounts = { applied: discounts.applied };
+  const totals = findAll(data, 'totals').find(t => Array.isArray(t));
+  if (totals) out.totals = totals;
+  const codes = findAll(data, 'codes').find(c => Array.isArray(c) && c.length);
+  if (codes) out.codes = codes;
+  return out;
+}
 
 // ---- stdio MCP client (store tools) ---------------------------------------
 
@@ -103,7 +136,9 @@ async function main() {
   const store = stdioClient('node', [join(here, 'store-mcp.mjs')], storeEnv);
   await store.call('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'openrouter-buyer', version: '0.1.0' } });
   store.notify('notifications/initialized', {});
-  addServer('store', store, await store.call('tools/list', {}));
+  try {
+    addServer('store', store, await store.call('tools/list', {}));
+  } catch (e) { emit({ type: 'stderr', text: `store tools unavailable: ${e.message}` }); }
 
   let offers = null;
   if (CONNECTOR) {
@@ -147,8 +182,10 @@ async function main() {
         try {
           const r = await client.call('tools/call', { name, arguments: args }, 60000);
           out = (r?.content || []).map(c => c.text || '').join('\n') || JSON.stringify(r);
+          if (client !== store) logCall({ tool: `${tc.function.name.split('__')[0]}.${name}`, args, ...logExtract(out) });
         } catch (e) { out = `${name} failed: ${e.message}`; }
       }
+      emit({ type: 'tool_call', tool: tc.function?.name, args, out: String(out).slice(0, 4000) });
       messages.push({ role: 'tool', tool_call_id: tc.id, content: String(out).slice(0, 60000) });
     }
   }

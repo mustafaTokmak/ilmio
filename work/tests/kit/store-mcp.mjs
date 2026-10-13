@@ -185,7 +185,12 @@ const fail = (id, code, message) => send({ jsonrpc: '2.0', id, error: { code, me
 let toolsCache = null;
 async function listTools() {
   if (toolsCache) return toolsCache;
-  const [ucp, faq] = await Promise.all([rpc(UCP_URL, 'tools/list', {}), rpc(FAQ_URL, 'tools/list', {})]);
+  // Each upstream may be absent (a demo shop has no UCP/FAQ endpoints);
+  // web_fetch is always served so the agent can still read the store's pages.
+  const [ucp, faq] = await Promise.all([
+    rpc(UCP_URL, 'tools/list', {}).catch(() => ({ tools: [] })),
+    rpc(FAQ_URL, 'tools/list', {}).catch(() => ({ tools: [] })),
+  ]);
   toolsCache = [...(ucp.tools || []), ...(faq.tools || []), WEB_TOOL];
   return toolsCache;
 }
@@ -206,7 +211,7 @@ async function call(name, args) {
       logLine(line);
       return result;
     }
-    const result = await ucpCall(name, args);
+    const result = await ucpCall(name, args).catch(e => ({ content: [{ type: 'text', text: `${name} failed: ${e.message}` }], isError: true }));
     if (['search_catalog', 'lookup_catalog', 'get_product'].includes(name) && injectDescAppend(result)) line.armed = true;
     Object.assign(line, extract(result));
     logLine(line);
